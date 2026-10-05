@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/auth";
-import { uploadImage } from "@/lib/storage";
+import { blobConfigured, uploadImage } from "@/lib/storage";
 
-/** Local fallback (not on Vercel) when BLOB_READ_WRITE_TOKEN is not set. */
+/** Local fallback (not on Vercel) when no Blob store is connected. */
 export async function POST(request: Request) {
   if (!(await getAdminSession())) return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
-  if (process.env.BLOB_READ_WRITE_TOKEN || process.env.VERCEL) {
-    return NextResponse.json({ error: "On Vercel, images are stored in Vercel Blob. Set BLOB_READ_WRITE_TOKEN." }, { status: 400 });
+  if (blobConfigured() || process.env.VERCEL) {
+    return NextResponse.json({ error: "On Vercel, images are stored in Vercel Blob. Connect a Blob store to the project." }, { status: 400 });
   }
   const form = await request.formData();
   const file = form.get("file");

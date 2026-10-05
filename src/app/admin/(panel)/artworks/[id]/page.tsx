@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { asc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { formatDate, formatMoney } from "@/lib/format";
+import { blobConfigured } from "@/lib/storage";
 import { ArtworkFields } from "@/components/admin/artwork-fields";
 import { SubmitButton } from "@/components/admin/buttons";
 import { ImageUploader } from "@/components/admin/image-uploader";
@@ -40,7 +41,7 @@ export default async function EditArtwork({ params, searchParams }: Props) {
   const holdOrder = a.holdOrderId ? await db.query.orders.findFirst({ where: eq(schema.orders.id, a.holdOrderId) }) : null;
   const soldOrder = a.soldOrderId ? await db.query.orders.findFirst({ where: eq(schema.orders.id, a.soldOrderId) }) : null;
   const p = a.printProduct;
-  const blobEnabled = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
+  const blobEnabled = blobConfigured();
 
   return (
     <div className="max-w-5xl">

@@ -1,24 +1,35 @@
 import { NextResponse } from "next/server";
-import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
+import { issueSignedToken } from "@vercel/blob";
+import { handleUploadPresigned, type HandleUploadPresignedBody } from "@vercel/blob/client";
 import { getAdminSession } from "@/lib/auth";
 
+const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/avif"];
+const MAX_BYTES = 25 * 1024 * 1024;
+
 /**
- * Issues short-lived tokens so the admin's browser can upload large artwork
- * photos straight to Vercel Blob (bypassing the 4.5 MB serverless body limit).
+ * Issues short-lived presigned URLs so the admin's browser can upload large
+ * artwork photos straight to Vercel Blob (bypassing the 4.5 MB serverless body
+ * limit). Works with Vercel OIDC (BLOB_STORE_ID) or BLOB_READ_WRITE_TOKEN.
  */
 export async function POST(request: Request) {
   if (!(await getAdminSession())) return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
-  const body = (await request.json()) as HandleUploadBody;
+  const body = (await request.json()) as HandleUploadPresignedBody;
   try {
-    const result = await handleUpload({
+    const result = await handleUploadPresigned({
       body,
       request,
-      onBeforeGenerateToken: async (pathname) => {
+      getSignedToken: async (pathname) => {
         if (!pathname.startsWith("artworks/")) throw new Error("Invalid upload path.");
+        const token = await issueSignedToken({
+          pathname,
+          operations: ["put"],
+          allowedContentTypes: ALLOWED_TYPES,
+          maximumSizeInBytes: MAX_BYTES,
+          validUntil: Date.now() + 15 * 60 * 1000,
+        });
         return {
-          allowedContentTypes: ["image/jpeg", "image/png", "image/webp", "image/avif"],
-          maximumSizeInBytes: 25 * 1024 * 1024,
-          addRandomSuffix: true,
+          token,
+          urlOptions: { allowedContentTypes: ALLOWED_TYPES, maximumSizeInBytes: MAX_BYTES, addRandomSuffix: true },
         };
       },
     });
