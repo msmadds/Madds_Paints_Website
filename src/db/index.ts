@@ -14,7 +14,8 @@ declare global {
 
 function getSql() {
   if (globalThis.__medepaintsSql) return globalThis.__medepaintsSql;
-  const url = process.env.DATABASE_URL;
+  // Vercel's Neon integration may add its variables with a prefix.
+  const url = process.env.DATABASE_URL || process.env.medepaints_db_DATABASE_URL;
   if (!url) {
     throw new Error("DATABASE_URL is not set. Add it to .env.local or to your Vercel project settings.");
   }
