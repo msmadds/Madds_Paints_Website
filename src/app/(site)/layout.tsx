@@ -1,3 +1,4 @@
+import { Analytics } from "@vercel/analytics/next";
 import { CartProvider } from "@/components/shop/cart-context";
 import { Header } from "@/components/site/header";
 import { Footer } from "@/components/site/footer";
@@ -13,6 +14,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
       <Header name={settings.businessName} />
       <main id="main">{children}</main>
       <Footer settings={settings} />
+      <Analytics />
     </CartProvider>
   );
 }
