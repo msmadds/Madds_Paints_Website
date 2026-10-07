@@ -15,6 +15,11 @@ export function promotionActive(now = new Date()): boolean {
   return now >= PROMOTION.startsAt && now <= PROMOTION.endsAt;
 }
 
+/** Price of an available original after the promotion discount. */
+export function salePrice(price: number): number {
+  return Math.round((price * (100 - PROMOTION.percent)) / 100);
+}
+
 /** Discount on original paintings only; prints stay at full price. */
 export function originalsDiscount(lines: { kind: "original" | "print"; lineTotal: number }[], now = new Date()): number {
   if (!promotionActive(now)) return 0;

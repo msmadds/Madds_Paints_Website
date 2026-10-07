@@ -1,5 +1,6 @@
 import { formatDimensions, formatMoney } from "@/lib/format";
 import { StatusMark } from "./status-mark";
+import { promotionActive, salePrice } from "@/lib/promotion";
 import type { Artwork } from "@/db/schema";
 
 /**
@@ -33,9 +34,15 @@ export function WallLabel({
         </>
       )}
       <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
-        {mode === "original" && artwork.price !== null && artwork.status !== "sold" && (
-          <span className="font-medium">{formatMoney(artwork.price, artwork.currency)}</span>
-        )}
+        {mode === "original" && artwork.price !== null && artwork.status !== "sold" &&
+          (artwork.status === "available" && promotionActive() ? (
+            <span className="font-medium">
+              {formatMoney(salePrice(artwork.price), artwork.currency)}{" "}
+              <s className="font-normal text-stone">{formatMoney(artwork.price, artwork.currency)}</s>
+            </span>
+          ) : (
+            <span className="font-medium">{formatMoney(artwork.price, artwork.currency)}</span>
+          ))}
         {mode === "print" && printFrom != null && (
           <span className="font-medium">From {formatMoney(printFrom, artwork.currency)}</span>
         )}
