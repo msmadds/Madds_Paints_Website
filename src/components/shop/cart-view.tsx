@@ -7,10 +7,11 @@ import { useResolvedCart } from "./use-resolved-cart";
 import { QuantityStepper } from "./quantity";
 import { formatMoney } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { PROMOTION } from "@/lib/promotion";
 
 export function CartView() {
   const { remove, setPrintQuantity, ready } = useCart();
-  const { lines, error, subtotal, currency, loading, hasUnavailable } = useResolvedCart();
+  const { lines, error, subtotal, discount, currency, loading, hasUnavailable } = useResolvedCart();
 
   if (!ready || loading) return <p className="py-20 text-stone">Loading your cart…</p>;
   if (error) return <p className="py-20 text-reddot">{error}</p>;
@@ -76,10 +77,16 @@ export function CartView() {
           <dl className="grid grid-cols-2 gap-y-3 text-[0.9375rem]">
             <dt>Subtotal</dt>
             <dd className="text-right tabular-nums">{formatMoney(subtotal, currency)}</dd>
+            {discount > 0 && (
+              <>
+                <dt>{PROMOTION.name}: {PROMOTION.percent}% off originals</dt>
+                <dd className="text-right tabular-nums">−{formatMoney(discount, currency)}</dd>
+              </>
+            )}
             <dt className="text-stone">Delivery</dt>
             <dd className="text-right text-stone">Chosen at checkout</dd>
             <dt className="border-t border-rule pt-3 font-semibold">Total</dt>
-            <dd className="border-t border-rule pt-3 text-right font-semibold tabular-nums">{formatMoney(subtotal, currency)}</dd>
+            <dd className="border-t border-rule pt-3 text-right font-semibold tabular-nums">{formatMoney(subtotal - discount, currency)}</dd>
           </dl>
           <p className="mt-2 text-[0.8125rem] text-stone">Before delivery. Pay via M-Pesa. No account needed.</p>
           {hasUnavailable && <p className="mt-4 text-[0.875rem] text-reddot">Remove unavailable items before checking out.</p>}

@@ -7,13 +7,14 @@ import { useCart } from "./cart-context";
 import { useResolvedCart } from "./use-resolved-cart";
 import { formatMoney } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { PROMOTION } from "@/lib/promotion";
 
 type Zone = { id: string; name: string; fee: number; currency: string; feeToBeConfirmed: boolean; estimate: string };
 
 export function CheckoutForm({ zones, holdHours }: { zones: Zone[]; holdHours: number }) {
   const router = useRouter();
   const { items, clear, ready } = useCart();
-  const { lines, subtotal, currency, loading, hasUnavailable } = useResolvedCart();
+  const { lines, subtotal, discount, currency, loading, hasUnavailable } = useResolvedCart();
   const [zoneId, setZoneId] = useState(zones[0]?.id ?? "");
   const [join, setJoin] = useState(false);
   const [email, setEmail] = useState("");
@@ -23,7 +24,7 @@ export function CheckoutForm({ zones, holdHours }: { zones: Zone[]; holdHours: n
 
   const zone = zones.find((z) => z.id === zoneId);
   const deliveryFee = zone && !zone.feeToBeConfirmed ? zone.fee : 0;
-  const total = subtotal + deliveryFee;
+  const total = subtotal + deliveryFee - discount;
 
   if (!ready || loading) return <p className="py-20 text-stone">Loading your order…</p>;
   if (!lines?.length) {
@@ -221,6 +222,12 @@ export function CheckoutForm({ zones, holdHours }: { zones: Zone[]; holdHours: n
           <dl className="mt-2 grid grid-cols-2 gap-y-2 border-t border-rule pt-4 text-[0.9375rem]">
             <dt>Subtotal</dt>
             <dd className="text-right tabular-nums">{formatMoney(subtotal, currency)}</dd>
+            {discount > 0 && (
+              <>
+                <dt>{PROMOTION.name}: {PROMOTION.percent}% off originals</dt>
+                <dd className="text-right tabular-nums">−{formatMoney(discount, currency)}</dd>
+              </>
+            )}
             <dt>Delivery</dt>
             <dd className="text-right tabular-nums">
               {zone?.feeToBeConfirmed ? "Confirmed by phone" : formatMoney(deliveryFee, currency)}

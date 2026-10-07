@@ -9,6 +9,7 @@ import { formatMoney, ORDER_STATUS_LABELS } from "./format";
 import type { CartItemInput, CheckoutInput } from "./validation";
 import { COLLECTOR_CONSENT_TEXT } from "./validation";
 import type { WebhookResult } from "./payments/types";
+import { originalsDiscount, PROMOTION } from "./promotion";
 
 /*
  * Inventory workflow
@@ -171,7 +172,8 @@ export async function createOrder(input: CheckoutInput, holdHours: number, curre
 
     const subtotal = lines.reduce((s, l) => s + l.lineTotal, 0);
     const deliveryFee = zone.feeToBeConfirmed ? 0 : zone.fee;
-    const total = subtotal + deliveryFee;
+    const discountTotal = originalsDiscount(lines.map((l) => ({ kind: l.itemType, lineTotal: l.lineTotal })), now);
+    const total = subtotal + deliveryFee - discountTotal;
 
     let orderNumber = generateOrderNumber(now);
     for (let i = 0; i < 5; i++) {
@@ -204,6 +206,8 @@ export async function createOrder(input: CheckoutInput, holdHours: number, curre
         currency,
         subtotal,
         deliveryFee,
+        discountTotal,
+        discountCode: discountTotal > 0 ? PROMOTION.code : null,
         total,
         collectorOptIn: Boolean(input.joinCollectorList && input.email),
         holdExpiresAt,

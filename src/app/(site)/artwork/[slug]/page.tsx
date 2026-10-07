@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { getArtworkBySlug, isOriginalPurchasable, primaryImage, printFromPrice } from "@/lib/catalog";
 import { getSettings } from "@/lib/settings";
 import { formatDimensions, formatMoney } from "@/lib/format";
+import { PROMOTION, promotionActive } from "@/lib/promotion";
 import { ArtworkGallery } from "@/components/shop/artwork-gallery";
 import { PurchaseOriginal } from "@/components/shop/purchase-original";
 import { StatusMark } from "@/components/site/status-mark";
@@ -75,7 +76,17 @@ export default async function ArtworkPage({ params }: Props) {
             </dl>
 
             {forSale && a.status !== "sold" && (
-              <p className="mt-6 text-[1.75rem] tabular-nums">{formatMoney(a.price, a.currency)}</p>
+              promotionActive() && a.status === "available" ? (
+                <div className="mt-6">
+                  <p className="text-[1.75rem] tabular-nums">
+                    {formatMoney(Math.round((a.price! * (100 - PROMOTION.percent)) / 100), a.currency)}{" "}
+                    <s className="text-[1.125rem] text-stone">{formatMoney(a.price, a.currency)}</s>
+                  </p>
+                  <p className="mt-1 text-[0.9375rem] text-verdigris">{PROMOTION.percent}% off for {PROMOTION.name}, until 11 October</p>
+                </div>
+              ) : (
+                <p className="mt-6 text-[1.75rem] tabular-nums">{formatMoney(a.price, a.currency)}</p>
+              )
             )}
 
             {a.coaIncluded && (

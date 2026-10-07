@@ -5,6 +5,7 @@ import { ArtImage } from "@/components/site/art-image";
 import { WallLabel } from "@/components/site/wall-label";
 import { SoldDot } from "@/components/site/status-mark";
 import { cn } from "@/lib/utils";
+import { PROMOTION, promotionActive } from "@/lib/promotion";
 
 export default async function HomePage() {
   const settings = await getSettings();
@@ -58,6 +59,23 @@ export default async function HomePage() {
           )}
         </div>
       </section>
+
+      {promotionActive() && (
+        <section className="border-t border-rule bg-plinth">
+          <div className="mx-auto max-w-[88rem] px-5 py-14 md:px-10 md:py-20">
+            <p className="text-[0.875rem] uppercase tracking-[0.12em] text-stone">{PROMOTION.name}</p>
+            <h2 className="display mt-3 max-w-3xl text-[2.25rem] md:text-[3rem]">Thank you to everyone who collects, shares and supports this work.</h2>
+            <p className="mt-5 max-w-2xl text-[1.0625rem]">
+              Every painting that leaves the studio goes to someone who chose it, and every message, visit and share keeps the studio going.
+              To say thank you, all original paintings are {PROMOTION.percent}% off until Sunday 11 October. The discount is applied
+              automatically at checkout.
+            </p>
+            <Link href="/shop/originals" className="btn btn-primary mt-8">
+              Shop originals
+            </Link>
+          </div>
+        </section>
+      )}
 
       {/* The two ways to collect */}
       <section className="border-y border-rule">

@@ -9,6 +9,7 @@ export function useResolvedCart() {
   const { items, ready } = useCart();
   const [lines, setLines] = useState<ResolvedLine[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [discount, setDiscount] = useState(0);
   const signature = JSON.stringify(items);
 
   useEffect(() => {
@@ -29,6 +30,7 @@ export function useResolvedCart() {
         const data = await r.json();
         if (!r.ok) throw new Error(data.error ?? "Could not load your cart.");
         setLines(data.lines);
+        setDiscount(data.discount ?? 0);
       })
       .catch((e) => {
         if (e.name !== "AbortError") setError(e.message);
@@ -40,5 +42,5 @@ export function useResolvedCart() {
   const available = (lines ?? []).filter((l) => l.available);
   const subtotal = available.reduce((s, l) => s + l.unitPrice * l.quantity, 0);
   const currency = lines?.[0]?.currency ?? "TZS";
-  return { lines, error, subtotal, currency, loading: ready && lines === null, hasUnavailable: (lines ?? []).some((l) => !l.available) };
+  return { lines, error, subtotal, discount: lines?.length ? discount : 0, currency, loading: ready && lines === null, hasUnavailable: (lines ?? []).some((l) => !l.available) };
 }

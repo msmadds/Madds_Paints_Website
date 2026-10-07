@@ -78,7 +78,11 @@ function itemsTable(order: Order, items: OrderItem[]): string {
   return `<table width="100%" cellpadding="0" cellspacing="0" style="margin:16px 0">${rows}
 <tr><td style="padding:8px 0">Delivery${order.deliveryZoneName ? ` (${esc(order.deliveryZoneName)})` : ""}</td><td align="right">${
     order.deliveryFeeToBeConfirmed ? "To be confirmed" : formatMoney(order.deliveryFee, order.currency)
-  }</td></tr>
+  }</td></tr>${
+    order.discountTotal > 0
+      ? `<tr><td style="padding:8px 0">Discount${order.discountCode ? ` (${esc(order.discountCode)})` : ""}</td><td align="right">&minus;${formatMoney(order.discountTotal, order.currency)}</td></tr>`
+      : ""
+  }
 <tr><td style="padding:8px 0;font-weight:bold">Total</td><td align="right" style="font-weight:bold">${formatMoney(order.total, order.currency)}</td></tr></table>`;
 }
 
