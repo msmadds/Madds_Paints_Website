@@ -10,6 +10,7 @@ const LINKS = [
   { href: "/admin/orders", label: "Orders" },
   { href: "/admin/artworks", label: "Artworks & prints" },
   { href: "/admin/collectors", label: "Collector List" },
+  { href: "/admin/email", label: "Email collectors" },
   { href: "/admin/messages", label: "Messages" },
   { href: "/admin/delivery", label: "Delivery fees" },
   { href: "/admin/settings", label: "Settings" },

@@ -10,9 +10,9 @@ import type { Order, OrderItem } from "@/db/schema";
  *
  * To switch providers, replace `deliver()` only.
  */
-type Mail = { to: string; subject: string; html: string; text: string; replyTo?: string; headers?: Record<string, string> };
+export type Mail = { to: string; subject: string; html: string; text: string; replyTo?: string; headers?: Record<string, string> };
 
-function siteUrl(): string {
+export function siteUrl(): string {
   return (process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").replace(/\/$/, "");
 }
 
@@ -50,11 +50,11 @@ async function deliver(mail: Mail, settings: Settings): Promise<boolean> {
   }
 }
 
-const esc = (s: string | null | undefined) =>
+export const esc = (s: string | null | undefined) =>
   (s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 
-function layout(settings: Settings, body: string, footer = ""): string {
-  return `<!doctype html><html><body style="margin:0;background:#F5F5F2;font-family:Georgia,'Times New Roman',serif;color:#2A2926">
+export function layout(settings: Settings, body: string, footer = ""): string {
+  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body style="margin:0;background:#F5F5F2;font-family:Georgia,'Times New Roman',serif;color:#2A2926">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:32px 16px">
 <table role="presentation" width="100%" style="max-width:560px;background:#ffffff;padding:36px 32px" cellpadding="0" cellspacing="0">
 <tr><td style="font-size:26px;letter-spacing:0.02em;padding-bottom:24px">${esc(settings.businessName)}</td></tr>
@@ -146,4 +146,51 @@ export async function sendCollectorWelcome(email: string, unsubscribeToken: stri
     },
     settings,
   );
+}
+
+/** True when Resend is configured and email is switched on in Settings. */
+export function emailConfigured(settings: Settings): boolean {
+  return Boolean(settings.emailEnabled && process.env.RESEND_API_KEY && process.env.EMAIL_FROM);
+}
+
+/**
+ * Sends many emails through Resend's batch endpoint (up to 100 per request).
+ * Returns how many were accepted and how many failed.
+ */
+export async function deliverBatch(mails: Mail[], settings: Settings): Promise<{ sent: number; failed: number }> {
+  const key = process.env.RESEND_API_KEY;
+  const from = process.env.EMAIL_FROM;
+  if (!emailConfigured(settings) || !key || !from) return { sent: 0, failed: mails.length };
+  const fromHeader = from.includes("<") ? from : `${settings.emailFromName} <${from}>`;
+  let sent = 0;
+  let failed = 0;
+  for (let i = 0; i < mails.length; i += 100) {
+    const chunk = mails.slice(i, i + 100);
+    try {
+      const res = await fetch("https://api.resend.com/emails/batch", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+        body: JSON.stringify(
+          chunk.map((m) => ({
+            from: fromHeader,
+            to: [m.to],
+            subject: m.subject,
+            html: m.html,
+            text: m.text,
+            reply_to: m.replyTo || settings.emailReplyTo || undefined,
+            headers: m.headers,
+          })),
+        ),
+      });
+      if (res.ok) sent += chunk.length;
+      else {
+        failed += chunk.length;
+        console.error("[email] batch failed", res.status, await res.text().catch(() => ""));
+      }
+    } catch (err) {
+      failed += chunk.length;
+      console.error("[email] batch error", err);
+    }
+  }
+  return { sent, failed };
 }
