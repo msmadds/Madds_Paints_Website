@@ -81,6 +81,13 @@ export const referenceSchema = z.object({
     .transform((v) => (v ? normalizePhone(v) ?? undefined : undefined)),
 });
 
+export const collectorSignupSchema = z.object({
+  email: z.string().trim().toLowerCase().max(254).pipe(z.email("Enter a valid email address.")),
+  name: z.string().trim().max(160).optional().transform((v) => (v ? v : undefined)),
+  // Honeypot: real people leave this empty.
+  website: z.string().max(0).optional(),
+});
+
 export const contactSchema = z.object({
   name: z.string().trim().min(2, "Enter your name.").max(160),
   phone: z.string().trim().max(32).optional().transform((v) => (v ? v : undefined)),

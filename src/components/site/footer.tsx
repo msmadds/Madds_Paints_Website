@@ -30,6 +30,7 @@ export function Footer({ settings }: { settings: Settings }) {
               WhatsApp
             </a>
           )}
+          <Link href="/collector-list">Join the Collector List</Link>
           <Link href="/order/lookup">Find my order</Link>
         </div>
         <div className="text-[0.875rem] text-stone md:col-span-2">

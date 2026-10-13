@@ -5,6 +5,7 @@ import { ArtImage } from "@/components/site/art-image";
 import { WallLabel } from "@/components/site/wall-label";
 import { SoldDot } from "@/components/site/status-mark";
 import { cn } from "@/lib/utils";
+import { CollectorSignup } from "@/components/site/collector-signup";
 import { PROMOTION, promotionActive } from "@/lib/promotion";
 
 export default async function HomePage() {
@@ -152,7 +153,7 @@ export default async function HomePage() {
       </section>
 
       {/* Collector list */}
-      <section className="mx-auto mt-32 max-w-[88rem] px-5 md:px-10">
+      <section id="collector-list" className="scroll-mt-24 mx-auto mt-32 max-w-[88rem] px-5 md:px-10">
         <div className="grid gap-8 bg-plinth px-6 py-14 md:grid-cols-12 md:px-12 md:py-20">
           <h2 className="display text-[2.25rem] md:col-span-5 md:text-[3rem]">The Collector List</h2>
           <div className="md:col-span-6 md:col-start-7">
@@ -161,9 +162,12 @@ export default async function HomePage() {
               collector-only preview.
             </p>
             <p className="mt-4 max-w-xl text-stone">
-              Joining is optional. When you check out, tick “Join the MedePaints Collector List” and add your email. You never
-              need an account to buy, and you can unsubscribe from any email in one click.
+              Joining is free and optional. Add your email below, or tick “Join the MedePaints Collector List” when you check out.
+              You never need an account to buy, and you can unsubscribe from any email in one click.
             </p>
+            <div className="mt-8">
+              <CollectorSignup id="cl-home" />
+            </div>
           </div>
         </div>
       </section>
