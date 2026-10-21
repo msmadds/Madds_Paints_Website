@@ -1,12 +1,15 @@
 import type { Metadata } from "next";
 import { CollectorSignup } from "@/components/site/collector-signup";
+import { WhatsAppChannel } from "@/components/site/whatsapp-channel";
+import { getSettings } from "@/lib/settings";
 
 export const metadata: Metadata = {
   title: "Collector List",
   description: "Hear first when a new original is finished, when a limited print is released, and when there is a collector-only preview.",
 };
 
-export default function CollectorListPage() {
+export default async function CollectorListPage() {
+  const settings = await getSettings();
   return (
     <div className="mx-auto max-w-[88rem] px-5 pt-10 md:px-10 md:pt-16">
       <div className="grid gap-14 lg:grid-cols-12">
@@ -24,6 +27,7 @@ export default function CollectorListPage() {
           <div className="mt-10">
             <CollectorSignup id="cl-page" />
           </div>
+          <WhatsAppChannel url={settings.whatsappChannelUrl} />
         </div>
       </div>
     </div>

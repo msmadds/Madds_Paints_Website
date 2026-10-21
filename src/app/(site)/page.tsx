@@ -6,6 +6,7 @@ import { WallLabel } from "@/components/site/wall-label";
 import { SoldDot } from "@/components/site/status-mark";
 import { cn } from "@/lib/utils";
 import { CollectorSignup } from "@/components/site/collector-signup";
+import { WhatsAppChannel } from "@/components/site/whatsapp-channel";
 import { PROMOTION, promotionActive } from "@/lib/promotion";
 
 export default async function HomePage() {
@@ -168,6 +169,7 @@ export default async function HomePage() {
             <div className="mt-8">
               <CollectorSignup id="cl-home" />
             </div>
+            <WhatsAppChannel url={settings.whatsappChannelUrl} />
           </div>
         </div>
       </section>

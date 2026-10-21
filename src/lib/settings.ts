@@ -21,6 +21,7 @@ export const settingsSchema = z.object({
   location: z.string().max(200).default("Dar es Salaam, Tanzania"),
   instagramUrl: z.string().max(300).default("https://www.instagram.com/medepaints"),
   instagramHandle: z.string().max(80).default("@medepaints"),
+  whatsappChannelUrl: z.string().max(300).default("https://whatsapp.com/channel/0029VbDwchjLCoX8u5rKuM2Y"),
 
   // M-Pesa
   mpesaNumber: z.string().max(40).default(""),

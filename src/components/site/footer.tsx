@@ -30,6 +30,11 @@ export function Footer({ settings }: { settings: Settings }) {
               WhatsApp
             </a>
           )}
+          {settings.whatsappChannelUrl && (
+            <a href={settings.whatsappChannelUrl} target="_blank" rel="noopener noreferrer">
+              WhatsApp Channel
+            </a>
+          )}
           <Link href="/collector-list">Join the Collector List</Link>
           <Link href="/order/lookup">Find my order</Link>
         </div>

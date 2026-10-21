@@ -44,6 +44,7 @@ export default async function SettingsAdmin({ searchParams }: { searchParams: Pr
             <Input label="Location" name="location" defaultValue={s.location} />
             <Input label="Instagram link" name="instagramUrl" defaultValue={s.instagramUrl} />
             <Input label="Instagram handle" name="instagramHandle" defaultValue={s.instagramHandle} />
+            <Input label="WhatsApp Channel link" name="whatsappChannelUrl" defaultValue={s.whatsappChannelUrl} className="md:col-span-2" hint="Shown as “Follow on WhatsApp” next to the Collector List. Leave empty to hide it." />
             <Input label="Currency" name="currency" defaultValue={s.currency} maxLength={3} hint="TZS. Changing this does not convert existing prices." />
           </div>
         </Panel>
