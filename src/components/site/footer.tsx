@@ -6,11 +6,15 @@ export function Footer({ settings }: { settings: Settings }) {
   const wa = settings.whatsapp ? whatsappLink(settings.whatsapp) : null;
   const year = new Date().getFullYear();
   return (
-    <footer className="mt-32 border-t border-rule">
-      <div className="mx-auto grid max-w-[88rem] gap-12 px-5 py-16 md:grid-cols-12 md:px-10">
+    <footer className="mt-32">
+      <div className="mx-auto max-w-[88rem] px-5 md:px-10">
+        <p aria-hidden className="display gold-text -ml-[0.04em] pb-[0.08em] text-[clamp(4rem,15vw,14rem)] leading-[0.85] tracking-[-0.045em]">
+          {settings.businessName}
+        </p>
+      </div>
+      <div className="mx-auto mt-10 grid max-w-[88rem] gap-12 border-t border-rule px-5 py-16 md:grid-cols-12 md:px-10">
         <div className="md:col-span-5">
-          <p className="display text-[2.5rem]">{settings.businessName}</p>
-          <p className="mt-3 max-w-sm text-stone">{settings.homeIntro}</p>
+          <p className="max-w-sm text-stone">{settings.homeIntro}</p>
         </div>
         <nav aria-label="Shop" className="grid gap-2 text-[0.9375rem] md:col-span-2">
           <Link href="/shop/originals">Originals</Link>

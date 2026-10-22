@@ -73,7 +73,7 @@ export function CartView() {
       </ul>
 
       <aside className="lg:col-span-4">
-        <div className="bg-white p-6 lg:sticky lg:top-28">
+        <div className="bg-card p-6 lg:sticky lg:top-28">
           <dl className="grid grid-cols-2 gap-y-3 text-[0.9375rem]">
             <dt>Subtotal</dt>
             <dd className="text-right tabular-nums">{formatMoney(subtotal, currency)}</dd>

@@ -68,7 +68,7 @@ export default async function OrderPage({ params, searchParams }: Props) {
       <div className="mt-12 grid gap-12 lg:grid-cols-12">
         <div className="lg:col-span-7">
           {/* Payment panel */}
-          <section aria-labelledby="payment-heading" className="border border-graphite bg-white p-6 md:p-8">
+          <section aria-labelledby="payment-heading" className="border border-graphite bg-card p-6 md:p-8">
             <p className="text-[0.875rem] text-stone">Payment status</p>
             <p id="payment-heading" className="mt-1 text-[1.25rem] font-semibold">
               {cancelled ? "Cancelled" : PAYMENT_STATUS_LABELS[order.paymentStatus]}
@@ -217,7 +217,7 @@ export default async function OrderPage({ params, searchParams }: Props) {
         </div>
 
         <aside className="lg:col-span-5">
-          <div className="bg-white p-6">
+          <div className="bg-card p-6">
             <h2 className="text-[1.0625rem] font-semibold">Items purchased</h2>
             <ul className="mt-4 divide-y divide-rule">
               {order.items.map((i) => (

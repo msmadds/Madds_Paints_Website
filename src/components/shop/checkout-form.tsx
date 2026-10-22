@@ -83,7 +83,7 @@ export function CheckoutForm({ zones, holdHours }: { zones: Zone[]; holdHours: n
     <form onSubmit={onSubmit} noValidate className="grid gap-12 pt-8 lg:grid-cols-12">
       <div className="space-y-12 lg:col-span-7">
         {formError && (
-          <div role="alert" className="border border-reddot bg-white px-5 py-4 text-[0.9375rem] text-reddot">
+          <div role="alert" className="border border-reddot bg-card px-5 py-4 text-[0.9375rem] text-reddot">
             {formError}
             {hasUnavailable && (
               <Link href="/cart" className="ml-2 underline">
@@ -131,7 +131,7 @@ export function CheckoutForm({ zones, holdHours }: { zones: Zone[]; holdHours: n
                   key={z.id}
                   className={cn(
                     "flex min-h-14 cursor-pointer items-center justify-between gap-4 border px-4 py-3",
-                    zoneId === z.id ? "border-graphite bg-white" : "border-rule",
+                    zoneId === z.id ? "border-graphite bg-card" : "border-rule",
                   )}
                 >
                   <span className="flex items-center gap-3">
@@ -141,7 +141,7 @@ export function CheckoutForm({ zones, holdHours }: { zones: Zone[]; holdHours: n
                       value={z.id}
                       checked={zoneId === z.id}
                       onChange={() => setZoneId(z.id)}
-                      className="size-4 accent-graphite"
+                      className="size-4 accent-gold"
                     />
                     <span>
                       <span className="block">{z.name}</span>
@@ -169,14 +169,14 @@ export function CheckoutForm({ zones, holdHours }: { zones: Zone[]; holdHours: n
           <Field label="Delivery notes (optional)" name="deliveryNotes" multiline hint="Best time to deliver, gate code, directions." error={err("deliveryNotes")} />
         </fieldset>
 
-        <fieldset className="border border-rule bg-white p-5">
+        <fieldset className="border border-rule bg-card p-5">
           <legend className="sr-only">Collector List</legend>
           <label className="flex cursor-pointer gap-4">
             <input
               type="checkbox"
               checked={join}
               onChange={(e) => setJoin(e.target.checked)}
-              className="mt-1 size-5 shrink-0 accent-graphite"
+              className="mt-1 size-5 shrink-0 accent-gold"
               aria-describedby="collector-help"
             />
             <span>
@@ -203,7 +203,7 @@ export function CheckoutForm({ zones, holdHours }: { zones: Zone[]; holdHours: n
       </div>
 
       <aside className="lg:col-span-5">
-        <div className="bg-white p-6 lg:sticky lg:top-28">
+        <div className="bg-card p-6 lg:sticky lg:top-28">
           <h2 className="text-[1.0625rem] font-semibold">Order summary</h2>
           <ul className="mt-4 divide-y divide-rule text-[0.9375rem]">
             {lines.map((l) => (

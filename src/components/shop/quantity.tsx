@@ -12,7 +12,7 @@ export function QuantityStepper({
   label: string;
 }) {
   return (
-    <div className="inline-flex h-11 items-center border border-rule bg-white" role="group" aria-label={`Quantity for ${label}`}>
+    <div className="inline-flex h-11 items-center border border-rule bg-card" role="group" aria-label={`Quantity for ${label}`}>
       <button
         type="button"
         className="h-full w-11 text-lg disabled:opacity-30"

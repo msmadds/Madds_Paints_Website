@@ -12,6 +12,10 @@
  * stone     #77726A  secondary text, wall-label details
  * graphite  #2A2926  text and primary buttons
  * reddot    #B3261E  the gallery "sold" dot — the only accent colour
+ * card      #FFFFFF  raised panels (order summary, selected options)
+ *
+ * These are the admin's colours. The public site wraps its pages in
+ * `.nocturne`, which redefines the same tokens (see below).
  */
 @theme {
   --color-wall: #f5f5f2;
@@ -21,6 +25,9 @@
   --color-graphite: #2a2926;
   --color-reddot: #b3261e;
   --color-verdigris: #3d6b5c;
+  --color-card: #ffffff;
+  --color-gold: #d8b56a;
+  --color-gold-hi: #f1d79c;
 
   --font-display: "Bodoni Moda Variable", "Bodoni 72", "Didot", Georgia, serif;
   --font-sans: "Hanken Grotesk Variable", "Helvetica Neue", Arial, system-ui, sans-serif;
@@ -168,14 +175,138 @@
   }
 }
 
+/*
+ * Nocturne theme — the public site only. Black, champagne gold and deep amber,
+ * after the "Nocturne" example in github.com/blendi-remade/dioramas (MIT).
+ * Redefining the tokens here restyles every page that uses them.
+ */
+.nocturne {
+  --color-wall: #050404;
+  --color-plinth: #16120e;
+  --color-card: #0f0c0a;
+  --color-rule: rgb(216 181 106 / 0.2);
+  --color-stone: #a09482;
+  --color-graphite: #efe6d5;
+  --color-reddot: #d9483b;
+  --color-verdigris: #7cb8a3;
+  color-scheme: dark;
+  position: relative;
+  isolation: isolate;
+  min-height: 100vh;
+  background:
+    radial-gradient(64rem 40rem at 50% -10rem, rgb(192 106 31 / 0.17), transparent 70%),
+    var(--color-wall);
+  color: var(--color-graphite);
+}
+body:has(.nocturne) {
+  background: #050404;
+}
+/* Gold dust, fixed behind the content. */
+.nocturne::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.55;
+  background-image:
+    radial-gradient(circle at 18% 22%, rgb(241 215 156 / 0.7) 0 1px, transparent 1.6px),
+    radial-gradient(circle at 74% 64%, rgb(241 215 156 / 0.5) 0 1px, transparent 1.6px),
+    radial-gradient(circle at 46% 86%, rgb(216 181 106 / 0.6) 0 0.8px, transparent 1.4px),
+    radial-gradient(circle at 88% 12%, rgb(216 181 106 / 0.45) 0 0.8px, transparent 1.4px);
+  background-size: 23rem 23rem, 31rem 31rem, 17rem 17rem, 41rem 41rem;
+}
+@layer components {
+  .nocturne ::selection {
+    background: var(--color-gold);
+    color: #1a1208;
+  }
+  .nocturne :focus-visible {
+    outline-color: var(--color-gold);
+  }
+  .nocturne .btn {
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    transition:
+      background 300ms var(--ease-gallery),
+      color 300ms var(--ease-gallery),
+      box-shadow 300ms var(--ease-gallery);
+  }
+  .nocturne .btn-primary {
+    background: linear-gradient(180deg, #e7c985, #c9a258);
+    color: #1a1208;
+    box-shadow:
+      0 10px 40px -12px rgb(216 181 106 / 0.5),
+      inset 0 1px 0 rgb(255 255 255 / 0.35);
+  }
+  .nocturne .btn-primary:hover {
+    background: linear-gradient(180deg, #f3d99c, #d6ae62);
+  }
+  .nocturne .btn-secondary {
+    border: 0;
+    background: rgb(8 7 6 / 0.35);
+    color: var(--color-graphite);
+    box-shadow: inset 0 0 0 1px rgb(216 181 106 / 0.45);
+  }
+  .nocturne .btn-secondary:hover {
+    background: rgb(8 7 6 / 0.35);
+    color: var(--color-gold-hi);
+    box-shadow: inset 0 0 0 1px var(--color-gold);
+  }
+  .nocturne .field {
+    background: rgb(255 255 255 / 0.03);
+    border-color: rgb(239 230 213 / 0.18);
+    color: var(--color-graphite);
+  }
+  .nocturne .field:focus {
+    border-color: var(--color-gold);
+    box-shadow: 0 0 0 1px var(--color-gold);
+  }
+  .nocturne .work-title {
+    color: var(--color-gold-hi);
+  }
+  /* Paintings sit in warm light rather than casting a shadow on a pale wall. */
+  .nocturne .hung {
+    box-shadow:
+      0 0 0 1px rgb(239 230 213 / 0.06),
+      0 30px 70px -30px rgb(0 0 0 / 0.9),
+      0 0 90px -20px rgb(216 160 80 / 0.2);
+  }
+  .eyebrow {
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--color-stone);
+  }
+  .gold-text {
+    color: transparent;
+    background: linear-gradient(180deg, #f1d79c 0%, #d8b56a 45%, #8a5a26 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+  }
+}
+/* A faint reflection under the hero painting, as on a polished floor. */
+@media (min-width: 64rem) {
+  .reflect {
+    -webkit-box-reflect: below 2px linear-gradient(transparent 74%, rgb(0 0 0 / 0.22));
+  }
+}
+
 /* The one orchestrated moment: the hero work is unveiled on first load. */
 @keyframes unveil {
   from {
     clip-path: inset(0 0 100% 0);
     transform: translateY(-12px);
   }
-  to {
+  99% {
     clip-path: inset(0 0 0 0);
+  }
+  to {
+    clip-path: none; /* so the reflection and glow are not clipped */
     transform: none;
   }
 }

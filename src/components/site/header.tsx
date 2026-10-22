@@ -32,7 +32,7 @@ export function Header({ name }: { name: string }) {
   return (
     <header className="sticky top-0 z-40 border-b border-rule/70 bg-wall/92 backdrop-blur supports-[backdrop-filter]:bg-wall/80">
       <div className="mx-auto flex h-16 max-w-[88rem] items-center justify-between px-5 md:h-20 md:px-10">
-        <Link href="/" className="display text-[1.625rem] leading-none md:text-[1.875rem]" aria-label={`${name} home`}>
+        <Link href="/" className="font-[family-name:var(--font-display)] text-[0.9375rem] leading-none tracking-[0.38em] uppercase md:text-[1.0625rem]" aria-label={`${name} home`}>
           {name}
         </Link>
 
@@ -42,8 +42,8 @@ export function Header({ name }: { name: string }) {
               key={n.href}
               href={n.href}
               className={cn(
-                "text-[0.9375rem] transition-colors hover:text-graphite",
-                active(n.href) ? "text-graphite underline decoration-1 underline-offset-[6px]" : "text-stone",
+                "text-[0.6875rem] font-medium tracking-[0.2em] uppercase transition-colors hover:text-gold-hi",
+                active(n.href) ? "text-gold-hi" : "text-stone",
               )}
             >
               {n.label}
@@ -54,14 +54,14 @@ export function Header({ name }: { name: string }) {
         <div className="flex items-center gap-1">
           <Link
             href="/cart"
-            className="flex h-11 items-center gap-2 px-3 text-[0.9375rem]"
+            className="flex h-11 items-center gap-2 px-3 text-[0.6875rem] font-medium tracking-[0.2em] uppercase text-stone transition-colors hover:text-gold-hi"
             aria-label={`Cart, ${count} item${count === 1 ? "" : "s"}`}
           >
             Cart
             <span
               className={cn(
-                "inline-flex min-w-6 items-center justify-center rounded-full px-1.5 text-[0.75rem] font-semibold leading-6 tabular-nums",
-                ready && count > 0 ? "bg-graphite text-wall" : "bg-plinth text-stone",
+                "tabular-nums",
+                ready && count > 0 ? "text-gold" : "text-stone",
               )}
             >
               {ready ? count : 0}
@@ -69,7 +69,7 @@ export function Header({ name }: { name: string }) {
           </Link>
           <button
             type="button"
-            className="flex h-11 items-center px-3 text-[0.9375rem] lg:hidden"
+            className="flex h-11 items-center px-3 text-[0.6875rem] font-medium tracking-[0.2em] uppercase lg:hidden"
             aria-expanded={open}
             aria-controls="mobile-nav"
             onClick={() => setOpen((o) => !o)}

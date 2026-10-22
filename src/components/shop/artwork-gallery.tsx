@@ -81,7 +81,7 @@ export function ArtworkGallery({ images, title, sold }: { images: Img[]; title: 
           aria-label={title}
           className="fade-in fixed inset-0 z-50 flex flex-col bg-[#1d1c1a]"
         >
-          <div className="flex items-center justify-between px-4 py-3 text-wall">
+          <div className="flex items-center justify-between px-4 py-3 text-white">
             <p className="work-title truncate text-[1.125rem]">{title}</p>
             <button type="button" onClick={() => setViewer(false)} className="h-11 px-3 text-[0.9375rem]" autoFocus>
               Close
@@ -100,11 +100,11 @@ export function ArtworkGallery({ images, title, sold }: { images: Img[]; title: 
             />
           </div>
           {images.length > 1 && (
-            <div className="flex justify-between px-4 py-3 text-wall">
+            <div className="flex justify-between px-4 py-3 text-white">
               <button type="button" className="h-11 px-3" onClick={() => go(-1)}>
                 Previous
               </button>
-              <span className="self-center text-[0.875rem] text-wall/70">
+              <span className="self-center text-[0.875rem] text-white/70">
                 {index + 1} of {images.length}
               </span>
               <button type="button" className="h-11 px-3" onClick={() => go(1)}>

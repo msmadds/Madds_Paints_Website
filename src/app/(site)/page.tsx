@@ -23,7 +23,8 @@ export default async function HomePage() {
         <div className="grid gap-10 lg:grid-cols-12 lg:gap-14">
           <div className="lg:order-2 lg:col-span-5 lg:flex lg:flex-col lg:justify-between lg:py-2">
             <div>
-              <h1 className="display text-[3.5rem] sm:text-[5rem] lg:text-[4.75rem] xl:text-[5.75rem] 2xl:text-[6.5rem]">{settings.businessName}</h1>
+              <p className="eyebrow mb-6">Original paintings · {settings.location}</p>
+              <h1 className="display gold-text pb-[0.06em] text-[3.5rem] sm:text-[5rem] lg:text-[4.75rem] xl:text-[5.75rem] 2xl:text-[6.5rem]">{settings.businessName}</h1>
               <p className="mt-5 max-w-md font-[family-name:var(--font-display)] text-[1.5rem] leading-snug md:text-[1.875rem]">
                 {settings.heroStatement}
               </p>
@@ -50,7 +51,7 @@ export default async function HomePage() {
             <div className="lg:order-1 lg:col-span-7">
               <Link href={`/artwork/${hero.slug}`} className="relative block">
                 <div className="unveil">
-                  <ArtImage image={primaryImage(hero)} title={hero.title} sizes="(min-width: 1024px) 58vw, 100vw" priority />
+                  <ArtImage image={primaryImage(hero)} title={hero.title} sizes="(min-width: 1024px) 58vw, 100vw" priority className="reflect" />
                 </div>
                 {hero.status === "sold" && <SoldDot />}
               </Link>

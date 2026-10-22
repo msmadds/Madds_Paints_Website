@@ -42,7 +42,7 @@ export function PrintPurchase({ variants, title }: { variants: Variant[]; title:
                 key={v.id}
                 className={cn(
                   "flex min-h-14 cursor-pointer items-center justify-between gap-4 border px-4 py-3 transition-colors",
-                  selectedId === v.id ? "border-graphite bg-white" : "border-rule hover:border-stone",
+                  selectedId === v.id ? "border-graphite bg-card" : "border-rule hover:border-stone",
                   out && "cursor-not-allowed opacity-50",
                 )}
               >
@@ -58,7 +58,7 @@ export function PrintPurchase({ variants, title }: { variants: Variant[]; title:
                       setQty(1);
                       setAdded(null);
                     }}
-                    className="size-4 accent-graphite"
+                    className="size-4 accent-gold"
                   />
                   <span>
                     <span className="font-semibold">{v.sizeLabel}</span>
@@ -86,7 +86,7 @@ export function PrintPurchase({ variants, title }: { variants: Variant[]; title:
           <span className="field-label" id="qty-label">
             Quantity
           </span>
-          <div className="flex h-12 items-center border border-rule bg-white" role="group" aria-labelledby="qty-label">
+          <div className="flex h-12 items-center border border-rule bg-card" role="group" aria-labelledby="qty-label">
             <button
               type="button"
               className="h-full w-12 text-xl disabled:opacity-30"
@@ -132,7 +132,7 @@ export function PrintPurchase({ variants, title }: { variants: Variant[]; title:
       </button>
 
       {added && (
-        <div className="fade-in mt-4 flex flex-wrap items-center justify-between gap-3 border border-graphite bg-white px-4 py-3" role="status">
+        <div className="fade-in mt-4 flex flex-wrap items-center justify-between gap-3 border border-graphite bg-card px-4 py-3" role="status">
           <p className="text-[0.9375rem]">Added to your cart: {added}</p>
           <Link href="/cart" className="btn btn-secondary min-h-10 px-4">
             View cart

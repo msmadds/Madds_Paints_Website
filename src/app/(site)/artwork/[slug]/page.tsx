@@ -132,7 +132,7 @@ export default async function ArtworkPage({ params }: Props) {
             </details>
 
             {hasPrints && (
-              <Link href={`/prints/${a.slug}`} className="mt-2 block border border-rule bg-white px-5 py-5 transition-colors hover:border-graphite">
+              <Link href={`/prints/${a.slug}`} className="mt-2 block border border-rule bg-card px-5 py-5 transition-colors hover:border-graphite">
                 <p className="font-semibold">Prints of this painting</p>
                 <p className="mt-1 text-[0.9375rem] text-stone">
                   300 GSM fine art paper, {a.printProduct!.variants.map((v) => v.sizeLabel).join(", ")}
@@ -165,7 +165,7 @@ function UnavailableNote({ status, forSale, hasPrints, slug }: { status: string;
       ? "This original has found its home and is no longer available."
       : "This original is reserved for a collector. If the reservation lapses it will become available again.";
   return (
-    <div className="border border-rule bg-white px-5 py-5">
+    <div className="border border-rule bg-card px-5 py-5">
       <p className="text-[0.9375rem]">{message}</p>
       <div className="mt-4 flex flex-col gap-3 sm:flex-row">
         {hasPrints && (

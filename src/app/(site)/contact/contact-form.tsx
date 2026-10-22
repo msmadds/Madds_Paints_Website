@@ -32,7 +32,7 @@ export function ContactForm() {
 
   if (state === "sent") {
     return (
-      <div role="status" className="border border-graphite bg-white p-6">
+      <div role="status" className="border border-graphite bg-card p-6">
         <p className="font-semibold">Message sent.</p>
         <p className="mt-2 text-stone">We reply within two working days, usually sooner.</p>
         <button type="button" className="link mt-4 text-[0.9375rem]" onClick={() => setState("idle")}>
