@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "Original paintings and fine art prints from Dar es Salaam.",
     start_url: "/",
     display: "standalone",
-    background_color: "#f5f5f2",
-    theme_color: "#f5f5f2",
+    background_color: "#f3efe7",
+    theme_color: "#f3efe7",
     icons: [
       { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
       { src: "/icon-512.png", sizes: "512x512", type: "image/png" },

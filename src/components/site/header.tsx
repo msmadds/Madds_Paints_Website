@@ -32,8 +32,9 @@ export function Header({ name }: { name: string }) {
   return (
     <header className="sticky top-0 z-40 border-b border-rule/70 bg-wall/92 backdrop-blur supports-[backdrop-filter]:bg-wall/80">
       <div className="mx-auto flex h-16 max-w-[88rem] items-center justify-between px-5 md:h-20 md:px-10">
-        <Link href="/" className="display text-[1.625rem] leading-none md:text-[1.875rem]" aria-label={`${name} home`}>
-          {name}
+        <Link href="/" className="flex items-center gap-3" aria-label={`${name} home`}>
+          <span className="font-[family-name:var(--font-display)] text-[1.625rem] leading-none font-medium tracking-[0.04em] md:text-[1.75rem]">{name}</span>
+          <span className="caps hidden border-l border-rule pl-3 text-[0.5625rem] text-stone sm:inline">Fine art · Dar es Salaam</span>
         </Link>
 
         <nav aria-label="Main" className="hidden items-center gap-8 lg:flex">
@@ -42,8 +43,9 @@ export function Header({ name }: { name: string }) {
               key={n.href}
               href={n.href}
               className={cn(
-                "text-[0.9375rem] transition-colors hover:text-graphite",
-                active(n.href) ? "text-graphite underline decoration-1 underline-offset-[6px]" : "text-stone",
+                "caps py-1.5 transition-colors hover:text-graphite",
+                "underline decoration-1 underline-offset-[8px]",
+                active(n.href) ? "text-graphite decoration-rose" : "text-stone decoration-transparent hover:decoration-rose",
               )}
             >
               {n.label}
@@ -54,7 +56,7 @@ export function Header({ name }: { name: string }) {
         <div className="flex items-center gap-1">
           <Link
             href="/cart"
-            className="flex h-11 items-center gap-2 px-3 text-[0.9375rem]"
+            className="caps flex h-11 items-center gap-2 px-3"
             aria-label={`Cart, ${count} item${count === 1 ? "" : "s"}`}
           >
             Cart
@@ -69,7 +71,7 @@ export function Header({ name }: { name: string }) {
           </Link>
           <button
             type="button"
-            className="flex h-11 items-center px-3 text-[0.9375rem] lg:hidden"
+            className="caps flex h-11 items-center px-3 lg:hidden"
             aria-expanded={open}
             aria-controls="mobile-nav"
             onClick={() => setOpen((o) => !o)}

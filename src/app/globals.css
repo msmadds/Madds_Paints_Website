@@ -2,6 +2,9 @@
 @import "@fontsource-variable/bodoni-moda/opsz.css";
 @import "@fontsource-variable/bodoni-moda/opsz-italic.css";
 @import "@fontsource-variable/hanken-grotesk/wght.css";
+@import "@fontsource-variable/cormorant-garamond/wght.css";
+@import "@fontsource-variable/cormorant-garamond/wght-italic.css";
+@import "@fontsource-variable/montserrat/wght.css";
 
 /*
  * MedePaints design tokens
@@ -12,6 +15,9 @@
  * stone     #77726A  secondary text, wall-label details
  * graphite  #2A2926  text and primary buttons
  * reddot    #B3261E  the gallery "sold" dot — the only accent colour
+ *
+ * These are the admin's colours. The public site wraps its pages in
+ * `.horologie`, which redefines the same tokens (see below).
  */
 @theme {
   --color-wall: #f5f5f2;
@@ -21,6 +27,8 @@
   --color-graphite: #2a2926;
   --color-reddot: #b3261e;
   --color-verdigris: #3d6b5c;
+  --color-rose: #c89b6d;
+  --color-rose-deep: #8f6039;
 
   --font-display: "Bodoni Moda Variable", "Bodoni 72", "Didot", Georgia, serif;
   --font-sans: "Hanken Grotesk Variable", "Helvetica Neue", Arial, system-ui, sans-serif;
@@ -165,6 +173,104 @@
   }
   .link:hover {
     text-decoration-thickness: 2px;
+  }
+}
+
+/*
+ * Horologie theme — the public site only. Ivory, navy and rose gold, light
+ * and editorial, after the "Aurel Horologie" example in
+ * github.com/blendi-remade/dioramas (MIT). Redefining the tokens here
+ * restyles every page that uses them; admin keeps the defaults above.
+ */
+.horologie {
+  --color-wall: #f3efe7;
+  --color-plinth: #ece6db;
+  --color-rule: rgb(22 33 61 / 0.14);
+  --color-stone: #5b6274;
+  --color-graphite: #16213d;
+  --font-display: "Cormorant Garamond Variable", "Cormorant Garamond", "Times New Roman", serif;
+  --font-sans: "Montserrat Variable", "Helvetica Neue", Arial, sans-serif;
+  min-height: 100vh;
+  background: var(--color-wall);
+  color: var(--color-graphite);
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+}
+body:has(.horologie) {
+  background: #f3efe7;
+}
+@layer components {
+  .horologie .display {
+    font-weight: 300;
+    letter-spacing: -0.025em;
+    line-height: 0.98;
+  }
+  .horologie .work-title {
+    font-weight: 500;
+    letter-spacing: 0;
+  }
+  .horologie .prose-gallery p {
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    line-height: 1.55;
+    color: rgb(29 35 48 / 0.86);
+  }
+  .horologie .btn {
+    border-radius: 999px;
+    padding: 0 1.75rem;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    transition:
+      background 300ms var(--ease-gallery),
+      color 300ms var(--ease-gallery),
+      box-shadow 300ms var(--ease-gallery);
+  }
+  .horologie .btn-primary:hover {
+    background: #22305a;
+    box-shadow: 0 16px 40px -12px rgb(22 33 61 / 0.45);
+  }
+  .horologie .btn-secondary {
+    border: 0;
+    background: rgb(243 239 231 / 0.5);
+    box-shadow: inset 0 0 0 1px rgb(22 33 61 / 0.32);
+  }
+  .horologie .btn-secondary:hover {
+    box-shadow: inset 0 0 0 1px var(--color-graphite);
+  }
+  .horologie .field {
+    background: #fbf9f5;
+  }
+  .horologie .link {
+    text-decoration-color: var(--color-rose);
+  }
+  .horologie ::selection {
+    background: var(--color-rose);
+    color: #fff;
+  }
+  /* Small capitals for labels, nav and specifications. */
+  .caps {
+    font-family: var(--font-sans);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+  }
+  .eyebrow {
+    font-family: var(--font-sans);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--color-rose-deep);
+  }
+  /* The hero's second line, as in "One heartbeat." */
+  .accent-line {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-weight: 300;
+    color: var(--color-rose-deep);
   }
 }
 

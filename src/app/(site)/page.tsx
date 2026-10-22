@@ -23,10 +23,9 @@ export default async function HomePage() {
         <div className="grid gap-10 lg:grid-cols-12 lg:gap-14">
           <div className="lg:order-2 lg:col-span-5 lg:flex lg:flex-col lg:justify-between lg:py-2">
             <div>
-              <h1 className="display text-[3.5rem] sm:text-[5rem] lg:text-[4.75rem] xl:text-[5.75rem] 2xl:text-[6.5rem]">{settings.businessName}</h1>
-              <p className="mt-5 max-w-md font-[family-name:var(--font-display)] text-[1.5rem] leading-snug md:text-[1.875rem]">
-                {settings.heroStatement}
-              </p>
+              <p className="eyebrow mb-6">Original paintings · Fine art prints · {settings.location}</p>
+              <h1 className="display text-[3.75rem] sm:text-[5.25rem] lg:text-[5rem] xl:text-[6rem] 2xl:text-[6.75rem]">{settings.businessName}</h1>
+              <p className="accent-line mt-4 max-w-md text-[1.875rem] leading-[1.1] md:text-[2.5rem]">{settings.heroStatement}</p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <Link href="/shop/originals" className="btn btn-primary">
                   Shop Originals
