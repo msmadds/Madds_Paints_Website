@@ -513,6 +513,26 @@ export async function deleteZone(fd: FormData) {
 /* settings                                                           */
 /* ------------------------------------------------------------------ */
 
+export async function saveCommissionsAction(fd: FormData) {
+  await requireAdmin();
+  const ids = [...new Set(fd.getAll("commissionArtworkIds").map(String))];
+  const parsed = settingsSchema
+    .pick({ commissionsOpen: true, commissionsIntro: true, commissionsProcess: true, commissionsClosedNote: true, commissionArtworkIds: true })
+    .safeParse({
+      commissionsOpen: bool(fd, "commissionsOpen"),
+      commissionsIntro: str(fd, "commissionsIntro"),
+      commissionsProcess: str(fd, "commissionsProcess"),
+      commissionsClosedNote: str(fd, "commissionsClosedNote"),
+      commissionArtworkIds: ids,
+    });
+  if (!parsed.success) {
+    back("/admin/commissions", "error", parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "));
+  }
+  await saveSettings(parsed.data);
+  refreshShop();
+  back("/admin/commissions", "ok", parsed.data.commissionsOpen ? "Saved. Commissions are open." : "Saved. Commissions are closed.");
+}
+
 export async function saveSettingsAction(fd: FormData) {
   await requireAdmin();
   const raw: Record<string, unknown> = {};

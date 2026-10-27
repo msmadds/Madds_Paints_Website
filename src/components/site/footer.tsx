@@ -16,6 +16,7 @@ export function Footer({ settings }: { settings: Settings }) {
           <Link href="/shop/originals">Originals</Link>
           <Link href="/shop/prints">Prints</Link>
           <Link href="/gallery">Gallery</Link>
+          <Link href="/commissions">Commissions</Link>
           <Link href="/about">About</Link>
         </nav>
         <div className="grid content-start gap-2 text-[0.9375rem] md:col-span-3">

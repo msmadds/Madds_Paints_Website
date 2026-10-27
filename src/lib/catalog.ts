@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, desc, eq, isNotNull } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNotNull } from "drizzle-orm";
 import { connection } from "next/server";
 import { db, schema } from "@/db";
 import { releaseExpiredHoldsThrottled } from "./orders";
@@ -57,6 +57,20 @@ export async function listGallery(): Promise<ArtworkFull[]> {
     with: withRelations(),
     orderBy: order,
   })) as ArtworkFull[];
+}
+
+/**
+ * Past commissions chosen in admin, in the chosen order. Unpublished works are
+ * included on purpose: a commission can be shown here without being in the gallery.
+ */
+export async function listCommissionWorks(ids: string[]): Promise<ArtworkFull[]> {
+  await connection();
+  if (!ids.length) return [];
+  const rows = (await db.query.artworks.findMany({
+    where: inArray(schema.artworks.id, ids),
+    with: withRelations(),
+  })) as ArtworkFull[];
+  return ids.map((id) => rows.find((r) => r.id === id)).filter((r): r is ArtworkFull => Boolean(r));
 }
 
 /** Artworks that have a published print product with at least one size. */

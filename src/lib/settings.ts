@@ -89,6 +89,31 @@ export const settingsSchema = z.object({
     .default(
       "You do not need to be an expert to collect art. You need a work that you want to see every day. Whether it is a first print for a new home or a large original for a long wall, every piece is packed with the same care and followed by the same attention.",
     ),
+
+  // Commissions
+  commissionsOpen: z.boolean().default(false),
+  commissionsIntro: z
+    .string()
+    .max(4000)
+    .default(
+      "A commission is a painting made for you: for a particular wall, a place that matters to you, or a colour you live with. Every commission begins with a conversation about the space, the size and the feeling you want the painting to hold.",
+    ),
+  /** One step per line: "Title — description". */
+  commissionsProcess: z
+    .string()
+    .max(4000)
+    .default(
+      [
+        "Share your idea — tell me about the space, the size you have in mind, the colours you love, and send photos if you have them.",
+        "Agree the details — size, timeline and price are confirmed with you before any painting begins.",
+        "The painting — the work is made by hand in the studio, with progress updates along the way.",
+        "Delivery — wrapped and delivered by hand within Dar es Salaam, or shipped to you.",
+      ].join("\n"),
+    ),
+  /** Shown while commissions are closed, e.g. "Reopening in January." */
+  commissionsClosedNote: z.string().max(400).default(""),
+  /** Artworks shown under "Past commissions", in this order. */
+  commissionArtworkIds: z.array(z.string().uuid()).max(60).default([]),
 });
 
 export type Settings = z.infer<typeof settingsSchema>;

@@ -2,7 +2,18 @@
 
 import { useState } from "react";
 
-export function ContactForm() {
+export function ContactForm({
+  subject,
+  messageLabel = "Message",
+  messagePlaceholder,
+  submitLabel = "Send message",
+}: {
+  /** Pre-fills the subject, e.g. "Commission enquiry". */
+  subject?: string;
+  messageLabel?: string;
+  messagePlaceholder?: string;
+  submitLabel?: string;
+} = {}) {
   const [state, setState] = useState<"idle" | "busy" | "sent">("idle");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
@@ -58,10 +69,10 @@ export function ContactForm() {
         {f("email", "Email", { type: "email", inputMode: "email", autoComplete: "email" })}
       </div>
       <p className="-mt-3 text-[0.8125rem] text-stone">Give at least one so we can reply.</p>
-      {f("subject", "Subject (optional)", { placeholder: "A painting, a commission, an order…" })}
+      {f("subject", "Subject (optional)", { placeholder: "A painting, a commission, an order…", defaultValue: subject })}
       <div>
-        <label htmlFor="c-message" className="field-label">Message</label>
-        <textarea id="c-message" name="message" rows={6} className="field" aria-invalid={errors.message ? true : undefined} required />
+        <label htmlFor="c-message" className="field-label">{messageLabel}</label>
+        <textarea id="c-message" name="message" rows={6} className="field" placeholder={messagePlaceholder} aria-invalid={errors.message ? true : undefined} required />
         {errors.message && <p className="field-error">{errors.message}</p>}
       </div>
       <div className="hidden" aria-hidden>
@@ -69,7 +80,7 @@ export function ContactForm() {
       </div>
       {error && !Object.keys(errors).length && <p role="alert" className="field-error">{error}</p>}
       <button type="submit" className="btn btn-primary" disabled={state === "busy"}>
-        {state === "busy" ? "Sending…" : "Send message"}
+        {state === "busy" ? "Sending…" : submitLabel}
       </button>
     </form>
   );
