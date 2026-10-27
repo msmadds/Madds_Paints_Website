@@ -89,3 +89,15 @@ export function formatPhone(p: string): string {
   if (l) return `0${l[1]} ${l[2]} ${l[3]}`;
   return p;
 }
+
+/** "Original painting", "Print, A3" or "Gift card" for an order line. */
+export function orderItemLabel(i: { itemType: "original" | "print" | "gift_card"; sizeLabel: string | null }, short = false): string {
+  if (i.itemType === "gift_card") return "Gift card";
+  if (i.itemType === "original") return short ? "Original" : "Original painting";
+  return `Print, ${i.sizeLabel}`;
+}
+
+/** True when an order contains only gift cards (nothing to deliver). */
+export function isGiftCardOnly(items: { itemType: string }[]): boolean {
+  return items.length > 0 && items.every((i) => i.itemType === "gift_card");
+}

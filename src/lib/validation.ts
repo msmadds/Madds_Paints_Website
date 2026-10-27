@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { normalizePhone } from "./utils";
+import { GIFT_CARD_AMOUNTS } from "./gift-card-rules";
 
 export const COLLECTOR_CONSENT_TEXT =
   "Join the MedePaints Collector List. Be the first to hear about new original artworks, limited prints and exclusive collector releases. You can unsubscribe at any time.";
@@ -53,6 +54,7 @@ export const checkoutSchema = z
     deliveryZoneId: z.uuid("Choose a delivery option."),
     deliveryNotes: optionalText(1000),
     joinCollectorList: z.boolean().default(false),
+    giftCardCode: optionalText(40),
   })
   .superRefine((v, ctx) => {
     if (v.joinCollectorList && !v.email) {
@@ -64,6 +66,28 @@ export const checkoutSchema = z
     }
   });
 export type CheckoutInput = z.infer<typeof checkoutSchema>;
+
+export const giftCardPurchaseSchema = z
+  .object({
+    amount: z.coerce
+      .number()
+      .int()
+      .refine((n) => (GIFT_CARD_AMOUNTS as readonly number[]).includes(n), "Choose a gift card amount."),
+    customerName: z.string().trim().min(2, "Enter your full name.").max(160),
+    phone: phoneSchema,
+    email: z.string().trim().toLowerCase().max(254).pipe(z.email("Enter your email address for the receipt.")),
+    sendAsGift: z.boolean().default(false),
+    senderName: optionalText(160),
+    recipientName: optionalText(160),
+    recipientEmail: optionalEmail,
+    message: optionalText(300),
+    joinCollectorList: z.boolean().default(false),
+  })
+  .superRefine((v, ctx) => {
+    if (v.sendAsGift && !v.recipientName) ctx.addIssue({ code: "custom", path: ["recipientName"], message: "Enter the recipient's name." });
+    if (v.sendAsGift && !v.recipientEmail) ctx.addIssue({ code: "custom", path: ["recipientEmail"], message: "Enter the email address to send the gift card to." });
+  });
+export type GiftCardPurchaseInput = z.infer<typeof giftCardPurchaseSchema>;
 
 export const referenceSchema = z.object({
   orderNumber: z.string().trim().min(4).max(32),

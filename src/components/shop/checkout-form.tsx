@@ -21,10 +21,35 @@ export function CheckoutForm({ zones, holdHours }: { zones: Zone[]; holdHours: n
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [giftInput, setGiftInput] = useState("");
+  const [gift, setGift] = useState<{ code: string; balance: number } | null>(null);
+  const [giftError, setGiftError] = useState<string | null>(null);
+  const [giftBusy, setGiftBusy] = useState(false);
 
   const zone = zones.find((z) => z.id === zoneId);
   const deliveryFee = zone && !zone.feeToBeConfirmed ? zone.fee : 0;
-  const total = subtotal + deliveryFee - discount;
+  const beforeGift = subtotal + deliveryFee - discount;
+  const giftApplied = gift ? Math.min(gift.balance, Math.max(0, beforeGift)) : 0;
+  const total = beforeGift - giftApplied;
+
+  async function applyGift() {
+    if (!giftInput.trim() || giftBusy) return;
+    setGiftBusy(true);
+    setGiftError(null);
+    try {
+      const res = await fetch("/api/gift-cards/check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: giftInput }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) setGift({ code: data.code, balance: data.balance });
+      else setGiftError(data.error ?? "This gift card cannot be used.");
+    } catch {
+      setGiftError("No connection. Try again.");
+    }
+    setGiftBusy(false);
+  }
 
   if (!ready || loading) return <p className="py-20 text-stone">Loading your order…</p>;
   if (!lines?.length) {
@@ -59,6 +84,7 @@ export function CheckoutForm({ zones, holdHours }: { zones: Zone[]; holdHours: n
           deliveryZoneId: zoneId,
           deliveryNotes: fd.get("deliveryNotes") || undefined,
           joinCollectorList: join,
+          giftCardCode: gift?.code,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -232,9 +258,57 @@ export function CheckoutForm({ zones, holdHours }: { zones: Zone[]; holdHours: n
             <dd className="text-right tabular-nums">
               {zone?.feeToBeConfirmed ? "Confirmed by phone" : formatMoney(deliveryFee, currency)}
             </dd>
+            {gift && (
+              <>
+                <dt>Gift card …{gift.code.slice(-4)}</dt>
+                <dd className="text-right tabular-nums">−{formatMoney(giftApplied, currency)}</dd>
+              </>
+            )}
             <dt className="border-t border-rule pt-3 text-[1.0625rem] font-semibold">Total</dt>
             <dd className="border-t border-rule pt-3 text-right text-[1.0625rem] font-semibold tabular-nums">{formatMoney(total, currency)}</dd>
           </dl>
+          <div className="mt-5 border-t border-rule pt-4">
+            {gift ? (
+              <div className="flex items-start justify-between gap-3 text-[0.875rem]">
+                <p>
+                  Gift card <span className="font-semibold tracking-wider">{gift.code}</span> applied.
+                  <span className="block text-stone">
+                    {gift.balance > giftApplied
+                      ? `${formatMoney(gift.balance - giftApplied, currency)} will stay on the card.`
+                      : "The full balance is used on this order."}
+                  </span>
+                </p>
+                <button type="button" className="link shrink-0" onClick={() => { setGift(null); setGiftInput(""); }}>
+                  Remove
+                </button>
+              </div>
+            ) : (
+              <div>
+                <label htmlFor="f-gift" className="field-label">Gift card (optional)</label>
+                <div className="flex gap-2">
+                  <input
+                    id="f-gift"
+                    value={giftInput}
+                    onChange={(e) => setGiftInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        applyGift();
+                      }
+                    }}
+                    placeholder="XXXX-XXXX-XXXX"
+                    autoComplete="off"
+                    className="field uppercase"
+                    aria-invalid={giftError ? true : undefined}
+                  />
+                  <button type="button" className="btn btn-secondary shrink-0" onClick={applyGift} disabled={giftBusy || !giftInput.trim()}>
+                    {giftBusy ? "…" : "Apply"}
+                  </button>
+                </div>
+                {giftError && <p className="field-error">{giftError}</p>}
+              </div>
+            )}
+          </div>
           <button type="submit" className="btn btn-primary mt-6 w-full" disabled={submitting || hasUnavailable || !available.length || !zoneId}>
             {submitting ? "Placing order…" : "Place order"}
           </button>
@@ -243,7 +317,11 @@ export function CheckoutForm({ zones, holdHours }: { zones: Zone[]; holdHours: n
               Some items are no longer available. <Link href="/cart" className="underline">Update your cart</Link>.
             </p>
           )}
-          <p className="mt-3 text-[0.8125rem] text-stone">You will pay via M-Pesa on the next page.</p>
+          <p className="mt-3 text-[0.8125rem] text-stone">
+            {gift && total === 0 && !zone?.feeToBeConfirmed
+              ? "Your gift card covers the whole order. Nothing to pay by M-Pesa."
+              : "You will pay via M-Pesa on the next page."}
+          </p>
         </div>
       </aside>
     </form>

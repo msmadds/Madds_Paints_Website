@@ -3,6 +3,7 @@ import { checkoutSchema, fieldErrors } from "@/lib/validation";
 import { CheckoutError, addCollector, createOrder } from "@/lib/orders";
 import { getSettings } from "@/lib/settings";
 import { notifyAdmin, sendCollectorWelcome, sendOrderReceived } from "@/lib/email";
+import { clientIp, isRateLimited, recordAttempt } from "@/lib/auth";
 import { formatMoney } from "@/lib/format";
 
 export async function POST(req: Request) {
@@ -13,6 +14,10 @@ export async function POST(req: Request) {
   }
   const input = parsed.data;
   const settings = await getSettings();
+  const giftKey = `giftcard:${await clientIp()}`;
+  if (input.giftCardCode && (await isRateLimited(giftKey, 10, 15))) {
+    return NextResponse.json({ error: "Too many gift card attempts. Wait 15 minutes, then try again." }, { status: 429 });
+  }
 
   try {
     const order = await createOrder(input, settings.holdHours, settings.currency);
@@ -42,6 +47,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ orderNumber: order.orderNumber, key: order.accessToken }, { status: 201 });
   } catch (err) {
     if (err instanceof CheckoutError) {
+      if (err.code === "gift_card") await recordAttempt(giftKey, false);
       return NextResponse.json({ error: err.message, code: err.code }, { status: err.code === "unavailable" ? 409 : 400 });
     }
     console.error("[api/orders]", err);

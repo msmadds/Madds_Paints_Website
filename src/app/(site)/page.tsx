@@ -8,6 +8,8 @@ import { cn } from "@/lib/utils";
 import { CollectorSignup } from "@/components/site/collector-signup";
 import { WhatsAppChannel } from "@/components/site/whatsapp-channel";
 import { PROMOTION, promotionActive } from "@/lib/promotion";
+import { formatMoney } from "@/lib/format";
+import { GIFT_CARD_AMOUNTS } from "@/lib/gift-card-rules";
 
 export default async function HomePage() {
   const settings = await getSettings();
@@ -150,6 +152,27 @@ export default async function HomePage() {
           <Link href="/about" className="link text-[0.9375rem]">
             About {settings.artistName}
           </Link>
+        </div>
+      </section>
+
+      {/* Gift cards */}
+      <section className="mx-auto mt-32 max-w-[88rem] px-5 md:px-10">
+        <div className="border-y border-rule py-16 text-center md:py-20">
+          <h2 className="display mx-auto max-w-4xl text-[2.25rem] md:text-[3.5rem]">
+            Not sure what print or painting to gift your loved one? Consider a gift card.
+          </h2>
+          <form action="/gift-cards" className="mx-auto mt-10 flex max-w-lg flex-col gap-3 sm:flex-row sm:items-end">
+            <div className="flex-1 text-left">
+              <label htmlFor="home-gift-amount" className="field-label">Amount</label>
+              <select id="home-gift-amount" name="amount" defaultValue={GIFT_CARD_AMOUNTS[1]} className="field">
+                {GIFT_CARD_AMOUNTS.map((a) => (
+                  <option key={a} value={a}>{formatMoney(a)}</option>
+                ))}
+              </select>
+            </div>
+            <button type="submit" className="btn btn-primary">Buy a gift card</button>
+          </form>
+          <p className="mt-4 text-[0.875rem] text-stone">Send it straight to them by email, with your message. Valid for 12 months.</p>
         </div>
       </section>
 

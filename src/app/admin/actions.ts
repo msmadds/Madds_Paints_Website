@@ -20,6 +20,8 @@ import {
   verifyPayment,
 } from "@/lib/orders";
 import { sendPaymentConfirmed } from "@/lib/email";
+import { deliverGiftCardsForOrder, giftCardExpiry, insertGiftCard } from "@/lib/gift-cards";
+import { sendGiftCard } from "@/lib/email";
 import { orderStatus } from "@/db/schema";
 
 /* ------------------------------------------------------------------ */
@@ -369,7 +371,10 @@ export async function verifyPaymentAction(fd: FormData) {
       const order = await verifyPayment(str(fd, "paymentId"), admin.email);
       const settings = await getSettings();
       const items = await db.query.orderItems.findMany({ where: eq(schema.orderItems.orderId, order.id) });
-      after(() => sendPaymentConfirmed(order, items, settings).catch((e) => console.error(e)));
+      after(async () => {
+        await deliverGiftCardsForOrder(order.id, settings).catch((e) => console.error(e));
+        await sendPaymentConfirmed(order, items, settings).catch((e) => console.error(e));
+      });
     },
     "Payment verified. Order marked Paid; originals marked SOLD.",
   );
@@ -398,7 +403,10 @@ export async function recordPaymentAction(fd: FormData) {
       const order = await recordManualPayment(orderId, ref, admin.email);
       const settings = await getSettings();
       const items = await db.query.orderItems.findMany({ where: eq(schema.orderItems.orderId, order.id) });
-      after(() => sendPaymentConfirmed(order, items, settings).catch((e) => console.error(e)));
+      after(async () => {
+        await deliverGiftCardsForOrder(order.id, settings).catch((e) => console.error(e));
+        await sendPaymentConfirmed(order, items, settings).catch((e) => console.error(e));
+      });
     },
     "Payment recorded. Order marked Paid.",
   );
@@ -409,7 +417,17 @@ export async function setStatusAction(fd: FormData) {
   const orderId = str(fd, "orderId");
   const status = z.enum(orderStatus.enumValues).safeParse(str(fd, "status"));
   if (!status.success) back(`/admin/orders/${orderId}`, "error", "Choose a status.");
-  await runOrder(`/admin/orders/${orderId}`, () => setOrderStatus(orderId, status.data, admin.email), "Status updated.");
+  await runOrder(
+    `/admin/orders/${orderId}`,
+    async () => {
+      await setOrderStatus(orderId, status.data, admin.email);
+      if (status.data === "paid") {
+        const settings = await getSettings();
+        after(() => deliverGiftCardsForOrder(orderId, settings).catch((e) => console.error(e)));
+      }
+    },
+    "Status updated.",
+  );
 }
 
 export async function cancelOrderAction(fd: FormData) {
@@ -439,7 +457,7 @@ export async function updateOrderDetails(fd: FormData) {
     if (order.paymentStatus === "paid") back(path, "error", "The delivery fee cannot change after payment.");
     patch.deliveryFee = fee;
     patch.deliveryFeeToBeConfirmed = false;
-    patch.total = order.subtotal + fee - order.discountTotal;
+    patch.total = Math.max(0, order.subtotal + fee - order.discountTotal - order.giftCardTotal);
     await db.insert(schema.orderEvents).values({
       orderId,
       type: "delivery_fee",
@@ -553,4 +571,79 @@ export async function saveSettingsAction(fd: FormData) {
   await saveSettings(parsed.data);
   refreshShop();
   back("/admin/settings", "ok", "Settings saved.");
+}
+
+/* ------------------------------------------------------------------ */
+/* gift cards                                                         */
+/* ------------------------------------------------------------------ */
+
+export async function issueGiftCardAction(fd: FormData) {
+  const admin = await requireAdmin();
+  const parsed = z
+    .object({
+      amount: z.coerce.number().int().min(1000, "Enter an amount of at least TZS 1,000.").max(10_000_000),
+      recipientName: z.string().trim().max(160),
+      deliverToEmail: z.union([z.literal(""), z.email("Enter a valid email address.")]),
+      senderName: z.string().trim().max(160),
+      message: z.string().trim().max(300),
+      send: z.boolean(),
+    })
+    .safeParse({
+      amount: str(fd, "amount").replace(/[,\s]/g, ""),
+      recipientName: str(fd, "recipientName"),
+      deliverToEmail: str(fd, "deliverToEmail").toLowerCase(),
+      senderName: str(fd, "senderName"),
+      message: str(fd, "message"),
+      send: bool(fd, "send"),
+    });
+  if (!parsed.success) back("/admin/gift-cards", "error", parsed.error.issues.map((i) => i.message).join(" "));
+  const v = parsed.data;
+  if (v.send && !v.deliverToEmail) back("/admin/gift-cards", "error", "Add an email address to send the card, or untick Send.");
+  const settings = await getSettings();
+  const now = new Date();
+  const card = await db.transaction((tx) =>
+    insertGiftCard(tx, {
+      initialValue: v.amount,
+      currency: settings.currency,
+      recipientName: v.recipientName || null,
+      deliverToEmail: v.deliverToEmail || null,
+      senderName: v.senderName || settings.businessName,
+      message: v.message || null,
+      expiresAt: giftCardExpiry(now),
+      issuedBy: admin.email,
+    }),
+  );
+  if (v.send) {
+    const sent = await sendGiftCard(card, settings);
+    if (sent) await db.update(schema.giftCards).set({ emailedAt: new Date() }).where(eq(schema.giftCards.id, card.id));
+    back(`/admin/gift-cards?q=${card.code}`, sent ? "ok" : "error", sent ? "Gift card issued and emailed." : "Gift card issued, but the email could not be sent. Check email settings, then use Resend.");
+  }
+  back(`/admin/gift-cards?q=${card.code}`, "ok", "Gift card issued.");
+}
+
+export async function resendGiftCardAction(fd: FormData) {
+  await requireAdmin();
+  const id = str(fd, "id");
+  const back_ = `/admin/gift-cards?q=${encodeURIComponent(str(fd, "q"))}`;
+  const card = await db.query.giftCards.findFirst({ where: eq(schema.giftCards.id, id) });
+  if (!card) back(back_, "error", "Gift card not found.");
+  const email = str(fd, "email").toLowerCase();
+  if (email && !z.email().safeParse(email).success) back(back_, "error", "Enter a valid email address.");
+  const target = email ? { ...card, deliverToEmail: email } : card;
+  if (!target.deliverToEmail) back(back_, "error", "This card has no email address. Enter one to send it.");
+  const sent = await sendGiftCard(target, await getSettings());
+  if (!sent) back(back_, "error", "The email could not be sent. Check that email is set up in Settings.");
+  await db
+    .update(schema.giftCards)
+    .set({ emailedAt: new Date(), deliverToEmail: target.deliverToEmail, updatedAt: new Date() })
+    .where(eq(schema.giftCards.id, id));
+  back(back_, "ok", `Gift card emailed to ${target.deliverToEmail}.`);
+}
+
+export async function setGiftCardStatusAction(fd: FormData) {
+  await requireAdmin();
+  const id = str(fd, "id");
+  const status = str(fd, "status") === "active" ? "active" : "disabled";
+  await db.update(schema.giftCards).set({ status, updatedAt: new Date() }).where(eq(schema.giftCards.id, id));
+  back(`/admin/gift-cards?q=${encodeURIComponent(str(fd, "q"))}`, "ok", status === "active" ? "Gift card enabled." : "Gift card disabled. It can no longer be used at checkout.");
 }

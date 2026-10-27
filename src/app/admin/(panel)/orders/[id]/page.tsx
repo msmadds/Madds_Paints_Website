@@ -3,7 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { asc, desc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
-import { formatDate, formatMoney, formatPhone, ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS } from "@/lib/format";
+import { formatDate, formatMoney, formatPhone, isGiftCardOnly, ORDER_STATUS_LABELS, orderItemLabel, PAYMENT_STATUS_LABELS } from "@/lib/format";
+import { formatGiftCode } from "@/lib/gift-card-rules";
 import { whatsappLink } from "@/lib/utils";
 import { SubmitButton } from "@/components/admin/buttons";
 import { Flash, Input, PageTitle, Panel, Pill, Select, Textarea } from "@/components/admin/ui";
@@ -32,9 +33,11 @@ export default async function OrderAdmin({ params, searchParams }: Props) {
       items: { orderBy: [asc(schema.orderItems.createdAt)] },
       payments: { orderBy: [asc(schema.payments.createdAt)] },
       events: { orderBy: [desc(schema.orderEvents.createdAt)] },
+      giftCardRedemptions: { with: { giftCard: { columns: { id: true, code: true } } } },
     },
   });
   if (!o) notFound();
+  const issuedCards = await db.query.giftCards.findMany({ where: eq(schema.giftCards.purchaseOrderId, o.id) });
 
   const wa = whatsappLink(o.phone, `Hello ${o.customerName}, this is MedePaints about your order ${o.orderNumber}.`);
   const site = (process.env.NEXT_PUBLIC_SITE_URL || "").replace(/\/$/, "");
@@ -116,7 +119,7 @@ export default async function OrderAdmin({ params, searchParams }: Props) {
                   <div>
                     <p className="work-title text-[1.0625rem]">{i.title}</p>
                     <p className="text-[0.8125rem] text-stone">
-                      {i.itemType === "original" ? "Original painting" : `Print, ${i.sizeLabel}`} × {i.quantity}, {formatMoney(i.unitPrice, o.currency)} each
+                      {orderItemLabel(i)} × {i.quantity}, {formatMoney(i.unitPrice, o.currency)} each
                     </p>
                     {i.coaNumber && <p className="text-[0.8125rem] text-stone">Certificate {i.coaNumber}</p>}
                     {i.artworkId && <Link href={`/admin/artworks/${i.artworkId}`} className="text-[0.8125rem] underline">Artwork record</Link>}
@@ -127,11 +130,55 @@ export default async function OrderAdmin({ params, searchParams }: Props) {
             </ul>
             <dl className="mt-2 grid grid-cols-2 gap-y-1 border-t border-rule pt-3 text-[0.9375rem]">
               <dt>Subtotal</dt><dd className="text-right tabular-nums">{formatMoney(o.subtotal, o.currency)}</dd>
-              <dt>Delivery ({o.deliveryZoneName})</dt>
-              <dd className="text-right tabular-nums">{o.deliveryFeeToBeConfirmed ? "To be confirmed" : formatMoney(o.deliveryFee, o.currency)}</dd>
+              {!isGiftCardOnly(o.items) && (
+                <>
+                  <dt>Delivery ({o.deliveryZoneName})</dt>
+                  <dd className="text-right tabular-nums">{o.deliveryFeeToBeConfirmed ? "To be confirmed" : formatMoney(o.deliveryFee, o.currency)}</dd>
+                </>
+              )}
+              {o.discountTotal > 0 && (
+                <>
+                  <dt>Discount{o.discountCode ? ` (${o.discountCode})` : ""}</dt>
+                  <dd className="text-right tabular-nums">−{formatMoney(o.discountTotal, o.currency)}</dd>
+                </>
+              )}
+              {o.giftCardRedemptions.map((r) => (
+                <div key={r.id} className="contents">
+                  <dt>
+                    Gift card{" "}
+                    <Link href={`/admin/gift-cards?q=${r.giftCard.code}`} className="underline">…{r.giftCard.code.slice(-4)}</Link>
+                    {r.reversedAt && <span className="text-stone"> (restored to card)</span>}
+                  </dt>
+                  <dd className="text-right tabular-nums">−{formatMoney(r.amount, o.currency)}</dd>
+                </div>
+              ))}
               <dt className="font-semibold">Total</dt><dd className="text-right font-semibold tabular-nums">{formatMoney(o.total, o.currency)}</dd>
             </dl>
           </Panel>
+
+          {(issuedCards.length > 0 || isGiftCardOnly(o.items)) && (
+            <Panel
+              title="Gift card"
+              description={issuedCards.length ? undefined : "The card is created and emailed automatically when you verify the payment."}
+            >
+              {o.items
+                .filter((i) => i.itemType === "gift_card" && i.details)
+                .map((i) => (
+                  <p key={i.id} className="text-[0.9375rem]">
+                    From {i.details!.senderName}
+                    {i.details!.sendToRecipient ? ` to ${i.details!.recipientName} (${i.details!.recipientEmail})` : ", sent to the buyer"}
+                    {i.details!.message && <span className="block text-stone">“{i.details!.message}”</span>}
+                  </p>
+                ))}
+              {issuedCards.map((c) => (
+                <p key={c.id} className="mt-3 text-[0.9375rem]">
+                  <Link href={`/admin/gift-cards?q=${c.code}`} className="font-semibold tracking-wider tabular-nums underline">{formatGiftCode(c.code)}</Link>{" "}
+                  · balance {formatMoney(c.balance, c.currency)} · {c.status === "active" ? `expires ${formatDate(c.expiresAt)}` : "disabled"} ·{" "}
+                  {c.emailedAt ? `emailed ${formatDate(c.emailedAt, true)}` : "not emailed yet"}
+                </p>
+              ))}
+            </Panel>
+          )}
 
           <Panel title="History">
             <ol className="space-y-3 text-[0.875rem]">

@@ -59,7 +59,7 @@ export const paymentRecordStatus = pgEnum("payment_record_status", [
   "verified",
   "rejected",
 ]);
-export const orderItemType = pgEnum("order_item_type", ["original", "print"]);
+export const orderItemType = pgEnum("order_item_type", ["original", "print", "gift_card"]);
 
 const timestamps = {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -212,6 +212,8 @@ export const orders = pgTable(
     deliveryFee: integer("delivery_fee").notNull().default(0),
     discountTotal: integer("discount_total").notNull().default(0),
     discountCode: varchar("discount_code", { length: 60 }),
+    /** Amount paid with a gift card (already taken off `total`). */
+    giftCardTotal: integer("gift_card_total").notNull().default(0),
     total: integer("total").notNull(),
 
     collectorOptIn: boolean("collector_opt_in").notNull().default(false),
@@ -256,10 +258,21 @@ export const orderItems = pgTable(
     unitPrice: integer("unit_price").notNull(),
     quantity: integer("quantity").notNull(),
     lineTotal: integer("line_total").notNull(),
+    /** Gift card purchases: who it is for and the message (see GiftCardDetails). */
+    details: jsonb("details").$type<GiftCardDetails>(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("order_items_order_idx").on(t.orderId)],
 );
+
+export type GiftCardDetails = {
+  senderName: string;
+  /** Email the card to the recipient rather than the buyer. */
+  sendToRecipient: boolean;
+  recipientName?: string;
+  recipientEmail?: string;
+  message?: string;
+};
 
 export const payments = pgTable(
   "payments",
@@ -302,6 +315,61 @@ export const orderEvents = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("order_events_order_idx").on(t.orderId)],
+);
+
+/* ------------------------------------------------------------------ */
+/* Gift cards                                                         */
+/* ------------------------------------------------------------------ */
+
+export const giftCards = pgTable(
+  "gift_cards",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    /** Normalised code without dashes, e.g. 7KQ4MX2PRT9H. Shown as 7KQ4-MX2P-RT9H. */
+    code: varchar("code", { length: 32 }).notNull(),
+    /** Secret in the printable-card link, so cards cannot be looked up by ID. */
+    accessToken: varchar("access_token", { length: 64 }).notNull(),
+    initialValue: integer("initial_value").notNull(),
+    balance: integer("balance").notNull(),
+    currency: varchar("currency", { length: 3 }).notNull().default("TZS"),
+    /** active | disabled */
+    status: varchar("status", { length: 20 }).notNull().default("active"),
+    /** The order that bought the card; null when issued by admin. */
+    purchaseOrderId: uuid("purchase_order_id").references(() => orders.id, { onDelete: "set null" }),
+    purchaseOrderItemId: uuid("purchase_order_item_id").references(() => orderItems.id, { onDelete: "set null" }),
+    senderName: varchar("sender_name", { length: 160 }),
+    recipientName: varchar("recipient_name", { length: 160 }),
+    /** Where the card is emailed. */
+    deliverToEmail: varchar("deliver_to_email", { length: 254 }),
+    message: text("message"),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    emailedAt: timestamp("emailed_at", { withTimezone: true }),
+    issuedBy: varchar("issued_by", { length: 254 }).notNull().default("system"),
+    ...timestamps,
+  },
+  (t) => [
+    uniqueIndex("gift_cards_code_idx").on(t.code),
+    uniqueIndex("gift_cards_purchase_item_idx").on(t.purchaseOrderItemId),
+    index("gift_cards_order_idx").on(t.purchaseOrderId),
+  ],
+);
+
+/** Each use of a gift card on an order. Reversed (balance restored) if the order is cancelled. */
+export const giftCardRedemptions = pgTable(
+  "gift_card_redemptions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    giftCardId: uuid("gift_card_id")
+      .notNull()
+      .references(() => giftCards.id, { onDelete: "cascade" }),
+    orderId: uuid("order_id")
+      .notNull()
+      .references(() => orders.id, { onDelete: "cascade" }),
+    amount: integer("amount").notNull(),
+    reversedAt: timestamp("reversed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("gift_card_redemptions_card_order_idx").on(t.giftCardId, t.orderId)],
 );
 
 /* ------------------------------------------------------------------ */
@@ -389,6 +457,7 @@ export const ordersRelations = relations(orders, ({ many, one }) => ({
   items: many(orderItems),
   payments: many(payments),
   events: many(orderEvents),
+  giftCardRedemptions: many(giftCardRedemptions),
   deliveryZone: one(deliveryZones, {
     fields: [orders.deliveryZoneId],
     references: [deliveryZones.id],
@@ -407,6 +476,16 @@ export const orderEventsRelations = relations(orderEvents, ({ one }) => ({
   order: one(orders, { fields: [orderEvents.orderId], references: [orders.id] }),
 }));
 
+export const giftCardsRelations = relations(giftCards, ({ one, many }) => ({
+  purchaseOrder: one(orders, { fields: [giftCards.purchaseOrderId], references: [orders.id] }),
+  redemptions: many(giftCardRedemptions),
+}));
+
+export const giftCardRedemptionsRelations = relations(giftCardRedemptions, ({ one }) => ({
+  giftCard: one(giftCards, { fields: [giftCardRedemptions.giftCardId], references: [giftCards.id] }),
+  order: one(orders, { fields: [giftCardRedemptions.orderId], references: [orders.id] }),
+}));
+
 export type Artwork = typeof artworks.$inferSelect;
 export type ArtworkImage = typeof artworkImages.$inferSelect;
 export type PrintProduct = typeof printProducts.$inferSelect;
@@ -416,6 +495,7 @@ export type OrderItem = typeof orderItems.$inferSelect;
 export type Payment = typeof payments.$inferSelect;
 export type DeliveryZone = typeof deliveryZones.$inferSelect;
 export type Collector = typeof collectors.$inferSelect;
+export type GiftCard = typeof giftCards.$inferSelect;
 export type OrderStatus = (typeof orderStatus.enumValues)[number];
 export type PaymentStatus = (typeof paymentStatus.enumValues)[number];
 export type ArtworkStatus = (typeof artworkStatus.enumValues)[number];

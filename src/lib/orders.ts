@@ -6,10 +6,12 @@ import { db, schema, type Tx } from "@/db";
 import type { Order, OrderItem, OrderStatus } from "@/db/schema";
 import { generateOrderNumber, randomToken, safeEqual } from "./crypto";
 import { formatMoney, ORDER_STATUS_LABELS } from "./format";
-import type { CartItemInput, CheckoutInput } from "./validation";
+import type { CartItemInput, CheckoutInput, GiftCardPurchaseInput } from "./validation";
 import { COLLECTOR_CONSENT_TEXT } from "./validation";
 import type { WebhookResult } from "./payments/types";
 import { originalsDiscount, PROMOTION } from "./promotion";
+import { issueGiftCardsForOrder, redeemGiftCard, reverseGiftCardsForOrder } from "./gift-cards";
+import { normaliseGiftCode } from "./gift-card-rules";
 
 /*
  * Inventory workflow
@@ -20,7 +22,8 @@ import { originalsDiscount, PROMOTION } from "./promotion";
  *  2. Reference sent  → hold no longer expires; admin reviews the payment.
  *  3. Payment verified→ held originals become SOLD automatically.
  *  4. Cancelled / hold expired without a reference → stock is handed back once
- *                       (guarded by orders.stock_released).
+ *                       (guarded by orders.stock_released), gift card balances
+ *                       spent on the order are restored, and cards it bought are disabled.
  *
  * The conditional UPDATE … WHERE status = 'available' is what prevents two
  * customers buying the same original at the same moment: only one UPDATE can
@@ -28,7 +31,7 @@ import { originalsDiscount, PROMOTION } from "./promotion";
  */
 
 export class CheckoutError extends Error {
-  constructor(message: string, public code: "unavailable" | "invalid" | "conflict" = "invalid") {
+  constructor(message: string, public code: "unavailable" | "invalid" | "conflict" | "gift_card" = "invalid") {
     super(message);
   }
 }
@@ -175,17 +178,9 @@ export async function createOrder(input: CheckoutInput, holdHours: number, curre
     const discountTotal = originalsDiscount(lines.map((l) => ({ kind: l.itemType, lineTotal: l.lineTotal })), now);
     const total = subtotal + deliveryFee - discountTotal;
 
-    let orderNumber = generateOrderNumber(now);
-    for (let i = 0; i < 5; i++) {
-      const clash = await tx.query.orders.findFirst({
-        where: eq(schema.orders.orderNumber, orderNumber),
-        columns: { id: true },
-      });
-      if (!clash) break;
-      orderNumber = generateOrderNumber(now);
-    }
+    const orderNumber = await uniqueOrderNumber(tx, now);
 
-    const [order] = await tx
+    const [inserted] = await tx
       .insert(schema.orders)
       .values({
         id: orderId,
@@ -241,6 +236,100 @@ export async function createOrder(input: CheckoutInput, holdHours: number, curre
       actor: "customer",
     });
 
+    let order = inserted;
+    if (input.giftCardCode) {
+      const code = normaliseGiftCode(input.giftCardCode);
+      if (!code) throw new CheckoutError("We could not find that gift card. Check the code and try again.", "gift_card");
+      const result = await redeemGiftCard(tx, code, orderId, total, currency, now);
+      if ("error" in result) throw new CheckoutError(result.error ?? "This gift card cannot be used.", "gift_card");
+      if (result.taken > 0) {
+        [order] = await tx
+          .update(schema.orders)
+          .set({ giftCardTotal: result.taken, total: total - result.taken, updatedAt: now })
+          .where(eq(schema.orders.id, orderId))
+          .returning();
+        await tx.insert(schema.orderEvents).values({
+          orderId,
+          type: "gift_card_used",
+          message: `${formatMoney(result.taken, currency)} paid with gift card …${code.slice(-4)}.`,
+          actor: "customer",
+        });
+        // Fully covered by the gift card: nothing to pay by M-Pesa.
+        if (order.total === 0) order = await markPaid(tx, orderId, "gift card", now);
+      }
+    }
+
+    return { ...order, items };
+  });
+}
+
+async function uniqueOrderNumber(tx: Tx, now: Date) {
+  let orderNumber = generateOrderNumber(now);
+  for (let i = 0; i < 5; i++) {
+    const clash = await tx.query.orders.findFirst({
+      where: eq(schema.orders.orderNumber, orderNumber),
+      columns: { id: true },
+    });
+    if (!clash) break;
+    orderNumber = generateOrderNumber(now);
+  }
+  return orderNumber;
+}
+
+/** A gift card purchase: no stock, no delivery address; the card is emailed once paid. */
+export async function createGiftCardOrder(input: GiftCardPurchaseInput, holdHours: number, currency: string): Promise<CreatedOrder> {
+  const now = new Date();
+  const orderId = randomUUID();
+  return db.transaction(async (tx) => {
+    const orderNumber = await uniqueOrderNumber(tx, now);
+    const deliverTo = input.sendAsGift ? input.recipientEmail! : input.email;
+    const [order] = await tx
+      .insert(schema.orders)
+      .values({
+        id: orderId,
+        orderNumber,
+        accessToken: randomToken(24),
+        status: "pending_payment",
+        paymentStatus: "unpaid",
+        paymentMethod: "mpesa_manual",
+        customerName: input.customerName,
+        phone: input.phone,
+        email: input.email,
+        address: `Gift card, emailed to ${deliverTo}`,
+        city: "By email",
+        deliveryZoneName: "Email",
+        currency,
+        subtotal: input.amount,
+        deliveryFee: 0,
+        total: input.amount,
+        collectorOptIn: Boolean(input.joinCollectorList),
+        holdExpiresAt: new Date(now.getTime() + holdHours * 3_600_000),
+      })
+      .returning();
+    const items = await tx
+      .insert(schema.orderItems)
+      .values({
+        orderId,
+        itemType: "gift_card",
+        title: "MedePaints gift card",
+        unitPrice: input.amount,
+        quantity: 1,
+        lineTotal: input.amount,
+        details: {
+          senderName: input.senderName || input.customerName,
+          sendToRecipient: input.sendAsGift,
+          recipientName: input.sendAsGift ? input.recipientName : undefined,
+          recipientEmail: input.sendAsGift ? input.recipientEmail : undefined,
+          message: input.message,
+        },
+      })
+      .returning();
+    await tx.insert(schema.orderEvents).values({
+      orderId,
+      type: "created",
+      message: `Gift card order placed for ${formatMoney(input.amount, currency)}. Awaiting M-Pesa payment.`,
+      actor: "customer",
+    });
     return { ...order, items };
   });
 }
@@ -258,6 +347,7 @@ async function releaseStock(tx: Tx, orderId: string, now: Date) {
     .returning({ id: schema.orders.id });
   if (!claimed) return false;
 
+  await reverseGiftCardsForOrder(tx, orderId, now);
   const items = await tx.query.orderItems.findMany({ where: eq(schema.orderItems.orderId, orderId) });
   for (const item of items) {
     if (item.itemType === "print" && item.printVariantId) {
@@ -412,6 +502,7 @@ async function markPaid(tx: Tx, orderId: string, actor: string, now: Date) {
     .set({ status: "sold", soldAt: now, soldOrderId: orderId, holdOrderId: null, holdExpiresAt: null, updatedAt: now })
     .where(eq(schema.artworks.holdOrderId, orderId));
   await tx.insert(schema.orderEvents).values({ orderId, type: "paid", message: "Payment verified. Order marked Paid.", actor });
+  await issueGiftCardsForOrder(tx, orderId, now);
   return o;
 }
 

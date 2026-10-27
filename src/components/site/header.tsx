@@ -31,7 +31,7 @@ export function Header({ name }: { name: string }) {
   const active = (href: string) => pathname === href || pathname.startsWith(href + "/");
 
   return (
-    <header className="sticky top-0 z-40 border-b border-rule/70 bg-wall/92 backdrop-blur supports-[backdrop-filter]:bg-wall/80">
+    <header className="sticky top-0 z-40 print:hidden border-b border-rule/70 bg-wall/92 backdrop-blur supports-[backdrop-filter]:bg-wall/80">
       <div className="mx-auto flex h-16 max-w-[88rem] items-center justify-between px-5 md:h-20 md:px-10">
         <Link href="/" className="display text-[1.625rem] leading-none md:text-[1.875rem]" aria-label={`${name} home`}>
           {name}

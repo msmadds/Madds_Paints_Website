@@ -4,10 +4,13 @@ import Link from "next/link";
 import { getOrderForCustomer } from "@/lib/orders";
 import { getSettings } from "@/lib/settings";
 import { activeProvider } from "@/lib/payments";
-import { formatDate, formatMoney, formatPhone, ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS } from "@/lib/format";
+import { formatDate, formatMoney, formatPhone, isGiftCardOnly, ORDER_STATUS_LABELS, orderItemLabel, PAYMENT_STATUS_LABELS } from "@/lib/format";
 import { CopyButton } from "@/components/site/copy-button";
 import { ReferenceForm } from "@/components/shop/reference-form";
 import { whatsappLink } from "@/lib/utils";
+import { eq } from "drizzle-orm";
+import { db, schema } from "@/db";
+import { giftCardLink } from "@/lib/email";
 
 export const metadata: Metadata = { title: "Your order", robots: { index: false, follow: false } };
 
@@ -45,6 +48,8 @@ export default async function OrderPage({ params, searchParams }: Props) {
   const cancelled = order.status === "cancelled";
   const paid = order.paymentStatus === "paid";
   const wa = settings.whatsapp ? whatsappLink(settings.whatsapp, `Hello, about my order ${order.orderNumber}`) : null;
+  const giftOnly = isGiftCardOnly(order.items);
+  const cards = giftOnly ? await db.query.giftCards.findMany({ where: eq(schema.giftCards.purchaseOrderId, order.id) }) : [];
 
   return (
     <div className="mx-auto max-w-[72rem] px-5 pt-10 md:px-10 md:pt-16">
@@ -174,9 +179,21 @@ export default async function OrderPage({ params, searchParams }: Props) {
                   Payment confirmed{order.paidAt ? ` on ${formatDate(order.paidAt)}` : ""}
                   {verified ? ` (M-Pesa code ${verified.reference})` : ""}.
                 </p>
-                <p>
-                  Order status: <strong>{ORDER_STATUS_LABELS[order.status]}</strong>. We will call you to arrange delivery.
-                </p>
+                {order.giftCardTotal > 0 && <p>{formatMoney(order.giftCardTotal, order.currency)} was paid with a gift card.</p>}
+                {giftOnly ? (
+                  <>
+                    <p>{cards.some((c) => c.emailedAt) ? "The gift card has been emailed" : "The gift card is being emailed"} {order.address.replace(/^Gift card, emailed /, "")}.</p>
+                    {cards.map((c) => (
+                      <p key={c.id}>
+                        <a href={giftCardLink(c)} className="link font-semibold">Open the printable gift card</a>
+                      </p>
+                    ))}
+                  </>
+                ) : (
+                  <p>
+                    Order status: <strong>{ORDER_STATUS_LABELS[order.status]}</strong>. We will call you to arrange delivery.
+                  </p>
+                )}
                 {order.trackingNumber && (
                   <p>
                     Tracking: {order.trackingCarrier} {order.trackingNumber}
@@ -195,9 +212,15 @@ export default async function OrderPage({ params, searchParams }: Props) {
             </div>
             <div>
               <h2 className="text-[1.0625rem] font-semibold">Delivery</h2>
-              <p className="mt-2 text-[0.9375rem]">{order.deliveryZoneName}</p>
-              <p className="text-[0.9375rem] whitespace-pre-line">{order.address}</p>
-              <p className="text-[0.9375rem]">{order.city}</p>
+              {giftOnly ? (
+                <p className="mt-2 text-[0.9375rem]">{order.address}, once payment is confirmed.</p>
+              ) : (
+                <>
+                  <p className="mt-2 text-[0.9375rem]">{order.deliveryZoneName}</p>
+                  <p className="text-[0.9375rem] whitespace-pre-line">{order.address}</p>
+                  <p className="text-[0.9375rem]">{order.city}</p>
+                </>
+              )}
               {order.deliveryNotes && <p className="mt-2 text-[0.875rem] text-stone">Notes: {order.deliveryNotes}</p>}
             </div>
           </section>
@@ -228,7 +251,7 @@ export default async function OrderPage({ params, searchParams }: Props) {
                   <div className="min-w-0">
                     <p className="work-title truncate text-[1.0625rem]">{i.title}</p>
                     <p className="text-[0.8125rem] text-stone">
-                      {i.itemType === "original" ? "Original painting" : `Print, ${i.sizeLabel}`} × {i.quantity}
+                      {orderItemLabel(i)} × {i.quantity}
                     </p>
                     {i.itemType === "original" && i.coaNumber && (
                       <p className="text-[0.8125rem] text-stone">Certificate of Authenticity included</p>
@@ -241,14 +264,24 @@ export default async function OrderPage({ params, searchParams }: Props) {
             <dl className="grid grid-cols-2 gap-y-2 border-t border-rule pt-4 text-[0.9375rem]">
               <dt>Subtotal</dt>
               <dd className="text-right tabular-nums">{formatMoney(order.subtotal, order.currency)}</dd>
-              <dt>Delivery</dt>
-              <dd className="text-right tabular-nums">
-                {order.deliveryFeeToBeConfirmed ? "To be confirmed" : formatMoney(order.deliveryFee, order.currency)}
-              </dd>
+              {!giftOnly && (
+                <>
+                  <dt>Delivery</dt>
+                  <dd className="text-right tabular-nums">
+                    {order.deliveryFeeToBeConfirmed ? "To be confirmed" : formatMoney(order.deliveryFee, order.currency)}
+                  </dd>
+                </>
+              )}
               {order.discountTotal > 0 && (
                 <>
                   <dt>Discount</dt>
                   <dd className="text-right tabular-nums">−{formatMoney(order.discountTotal, order.currency)}</dd>
+                </>
+              )}
+              {order.giftCardTotal > 0 && (
+                <>
+                  <dt>Paid with gift card</dt>
+                  <dd className="text-right tabular-nums">−{formatMoney(order.giftCardTotal, order.currency)}</dd>
                 </>
               )}
               <dt className="border-t border-rule pt-3 font-semibold">Total</dt>

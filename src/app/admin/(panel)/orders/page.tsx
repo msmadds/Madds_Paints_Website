@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { and, desc, ilike, inArray, or, type SQL } from "drizzle-orm";
 import { db, schema } from "@/db";
-import { formatDate, formatMoney, formatPhone, ORDER_STATUS_LABELS } from "@/lib/format";
+import { formatDate, formatMoney, formatPhone, ORDER_STATUS_LABELS, orderItemLabel } from "@/lib/format";
 import { Flash, PageTitle, Pill } from "@/components/admin/ui";
 import { orderStatus, type OrderStatus } from "@/db/schema";
 import { releaseExpiredHolds } from "@/lib/orders";
@@ -88,7 +88,7 @@ export default async function OrdersAdmin({ searchParams }: { searchParams: Prom
                   </td>
                   <td className="p-3">
                     {o.items.map((i) => (
-                      <p key={i.id}>{i.title} <span className="text-stone">({i.itemType === "original" ? "original" : i.sizeLabel}) × {i.quantity}</span></p>
+                      <p key={i.id}>{i.title} <span className="text-stone">({orderItemLabel(i, true)}) × {i.quantity}</span></p>
                     ))}
                   </td>
                   <td className="p-3 tabular-nums">{formatMoney(o.total, o.currency)}</td>

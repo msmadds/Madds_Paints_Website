@@ -1,7 +1,8 @@
 import "server-only";
-import { formatDate, formatMoney, PAYMENT_STATUS_LABELS } from "./format";
+import { formatDate, formatMoney, isGiftCardOnly, orderItemLabel, PAYMENT_STATUS_LABELS } from "./format";
+import { formatGiftCode } from "./gift-card-rules";
 import type { Settings } from "./settings";
-import type { Order, OrderItem } from "@/db/schema";
+import type { GiftCard, Order, OrderItem } from "@/db/schema";
 
 /**
  * Transactional email via Resend's HTTP API (https://resend.com).
@@ -67,20 +68,27 @@ ${esc(settings.location)}${settings.phone ? ` &nbsp;|&nbsp; ${esc(settings.phone
 function itemsTable(order: Order, items: OrderItem[]): string {
   const rows = items
     .map(
-      (i) => `<tr><td style="padding:8px 0;border-bottom:1px solid #EEE">${esc(i.title)}<br><span style="color:#77726A;font-size:13px">${
-        i.itemType === "original" ? "Original" : `Print, ${esc(i.sizeLabel)}`
-      } &times; ${i.quantity}</span></td><td align="right" style="padding:8px 0;border-bottom:1px solid #EEE">${formatMoney(
+      (i) => `<tr><td style="padding:8px 0;border-bottom:1px solid #EEE">${esc(i.title)}<br><span style="color:#77726A;font-size:13px">${esc(
+        orderItemLabel(i, true),
+      )} &times; ${i.quantity}</span></td><td align="right" style="padding:8px 0;border-bottom:1px solid #EEE">${formatMoney(
         i.lineTotal,
         order.currency,
       )}</td></tr>`,
     )
     .join("");
+  const delivery = isGiftCardOnly(items)
+    ? ""
+    : `<tr><td style="padding:8px 0">Delivery${order.deliveryZoneName ? ` (${esc(order.deliveryZoneName)})` : ""}</td><td align="right">${
+        order.deliveryFeeToBeConfirmed ? "To be confirmed" : formatMoney(order.deliveryFee, order.currency)
+      }</td></tr>`;
   return `<table width="100%" cellpadding="0" cellspacing="0" style="margin:16px 0">${rows}
-<tr><td style="padding:8px 0">Delivery${order.deliveryZoneName ? ` (${esc(order.deliveryZoneName)})` : ""}</td><td align="right">${
-    order.deliveryFeeToBeConfirmed ? "To be confirmed" : formatMoney(order.deliveryFee, order.currency)
-  }</td></tr>${
+${delivery}${
     order.discountTotal > 0
       ? `<tr><td style="padding:8px 0">Discount${order.discountCode ? ` (${esc(order.discountCode)})` : ""}</td><td align="right">&minus;${formatMoney(order.discountTotal, order.currency)}</td></tr>`
+      : ""
+  }${
+    order.giftCardTotal > 0
+      ? `<tr><td style="padding:8px 0">Paid with gift card</td><td align="right">&minus;${formatMoney(order.giftCardTotal, order.currency)}</td></tr>`
       : ""
   }
 <tr><td style="padding:8px 0;font-weight:bold">Total</td><td align="right" style="font-weight:bold">${formatMoney(order.total, order.currency)}</td></tr></table>`;
@@ -92,7 +100,10 @@ function orderLink(order: Order) {
 
 export async function sendOrderReceived(order: Order, items: OrderItem[], settings: Settings) {
   if (!order.email) return false;
+  // Fully paid with a gift card: send the confirmation straight away.
+  if (order.paymentStatus === "paid") return sendPaymentConfirmed(order, items, settings);
   const link = orderLink(order);
+  const giftOnly = isGiftCardOnly(items);
   const html = layout(
     settings,
     `<p>Dear ${esc(order.customerName)},</p>
@@ -101,7 +112,7 @@ ${itemsTable(order, items)}
 <p><strong>Payment:</strong> ${PAYMENT_STATUS_LABELS[order.paymentStatus]}.<br>
 Pay ${formatMoney(order.total, order.currency)} via M-Pesa to <strong>${esc(settings.mpesaNumber)}</strong> (${esc(settings.mpesaAccountName)}), then enter your M-Pesa confirmation code on your order page.</p>
 <p><a href="${link}" style="color:#2A2926">View your order and payment instructions</a></p>
-<p>Delivery to: ${esc(order.address)}, ${esc(order.city)}</p>`,
+<p>${giftOnly ? `The gift card is emailed as soon as the payment is confirmed: ${esc(order.address.replace(/^Gift card, emailed to /, "to "))}.` : `Delivery to: ${esc(order.address)}, ${esc(order.city)}`}</p>`,
   );
   const text = `Thank you for your purchase.\nOrder ${order.orderNumber}\nTotal ${formatMoney(order.total, order.currency)}\nPay via M-Pesa to ${settings.mpesaNumber} (${settings.mpesaAccountName}), then enter your confirmation code: ${link}`;
   return deliver({ to: order.email, subject: `Your MedePaints order ${order.orderNumber}`, html, text }, settings);
@@ -109,15 +120,61 @@ Pay ${formatMoney(order.total, order.currency)} via M-Pesa to <strong>${esc(sett
 
 export async function sendPaymentConfirmed(order: Order, items: OrderItem[], settings: Settings) {
   if (!order.email) return false;
+  const giftOnly = isGiftCardOnly(items);
+  const how = order.total === 0 && order.giftCardTotal > 0 ? "Your order is paid in full with your gift card" : `We have confirmed your M-Pesa payment for order <strong>${esc(order.orderNumber)}</strong>`;
+  const next = giftOnly
+    ? "The gift card has been emailed. You can also open it from your order page."
+    : `We will call you on ${esc(order.phone)} to arrange delivery.`;
   const html = layout(
     settings,
     `<p>Dear ${esc(order.customerName)},</p>
-<p>We have confirmed your M-Pesa payment for order <strong>${esc(order.orderNumber)}</strong>. We will call you on ${esc(order.phone)} to arrange delivery.</p>
+<p>${how}. ${next}</p>
 ${itemsTable(order, items)}
 <p><a href="${orderLink(order)}" style="color:#2A2926">View your order</a></p>`,
   );
-  const text = `Payment confirmed for order ${order.orderNumber}. We will call you on ${order.phone} to arrange delivery.`;
+  const text = `Payment confirmed for order ${order.orderNumber}. ${giftOnly ? "The gift card has been emailed." : `We will call you on ${order.phone} to arrange delivery.`}`;
   return deliver({ to: order.email, subject: `Payment confirmed: ${order.orderNumber}`, html, text }, settings);
+}
+
+export function giftCardLink(card: Pick<GiftCard, "id" | "accessToken">) {
+  return `${siteUrl()}/gift-cards/card/${card.id}?k=${encodeURIComponent(card.accessToken)}`;
+}
+
+/** Emails a gift card to the recipient (or the buyer). Returns true when sent. */
+export async function sendGiftCard(card: GiftCard, settings: Settings) {
+  if (!card.deliverToEmail) return false;
+  const amount = formatMoney(card.initialValue, card.currency);
+  const forName = card.recipientName ? esc(card.recipientName) : "you";
+  const from = card.senderName ? esc(card.senderName) : esc(settings.businessName);
+  const html = layout(
+    settings,
+    `<p style="font-family:Georgia,serif;font-size:22px;margin:0 0 8px">A gift card for ${forName}</p>
+<p>${card.recipientName ? `${from} has sent you a ${settings.businessName} gift card.` : `Here is your ${esc(settings.businessName)} gift card.`}</p>
+${card.message ? `<p style="border-left:2px solid #2A2926;padding-left:12px;font-style:italic">${esc(card.message)}</p>` : ""}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0;background:#F5F5F2"><tr><td style="padding:24px;text-align:center">
+<div style="font-size:13px;color:#77726A;letter-spacing:0.08em;text-transform:uppercase">Gift card value</div>
+<div style="font-family:Georgia,serif;font-size:30px;margin:6px 0 14px">${amount}</div>
+<div style="font-size:13px;color:#77726A">Your code</div>
+<div style="font-size:24px;font-weight:bold;letter-spacing:0.12em;margin-top:4px">${formatGiftCode(card.code)}</div>
+<div style="font-size:13px;color:#77726A;margin-top:14px">Valid until ${formatDate(card.expiresAt)}</div>
+</td></tr></table>
+<p><strong>How to use it:</strong> choose an original painting or a print at <a href="${siteUrl()}" style="color:#2A2926">${esc(siteUrl().replace(/^https?:\/\//, ""))}</a>, then enter the code at checkout. If your order costs less than the card, the rest stays on the card for next time.</p>
+<p><a href="${giftCardLink(card)}" style="color:#2A2926">Open your printable gift card</a> (it also shows the remaining balance).</p>`,
+  );
+  const text = `${card.recipientName ? `${card.senderName ?? settings.businessName} has sent you a ${settings.businessName} gift card.` : `Your ${settings.businessName} gift card.`}
+Value: ${amount}
+Code: ${formatGiftCode(card.code)}
+Valid until ${formatDate(card.expiresAt)}
+${card.message ? `Message: ${card.message}\n` : ""}Use it at checkout on ${siteUrl()}. Printable card: ${giftCardLink(card)}`;
+  return deliver(
+    {
+      to: card.deliverToEmail,
+      subject: card.recipientName ? `${card.senderName ?? "Someone"} sent you a ${settings.businessName} gift card` : `Your ${settings.businessName} gift card`,
+      html,
+      text,
+    },
+    settings,
+  );
 }
 
 export async function notifyAdmin(subject: string, lines: string[], settings: Settings, adminPath?: string) {
