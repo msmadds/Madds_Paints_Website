@@ -33,9 +33,28 @@ export function Header({ name }: { name: string }) {
   return (
     <header className="sticky top-0 z-40 print:hidden border-b border-rule/70 bg-wall/92 backdrop-blur supports-[backdrop-filter]:bg-wall/80">
       <div className="mx-auto flex h-16 max-w-[88rem] items-center justify-between px-5 md:h-20 md:px-10">
-        <Link href="/" className="display text-[1.625rem] leading-none md:text-[1.875rem]" aria-label={`${name} home`}>
-          {name}
-        </Link>
+        <div className="flex items-center gap-1">
+          {/* Phones and tablets: the menu button sits on the left, as people expect. */}
+          <button
+            type="button"
+            className="-ml-2 flex size-11 items-center justify-center lg:hidden"
+            aria-expanded={open}
+            aria-controls="mobile-nav"
+            aria-label={open ? "Close menu" : "Open menu"}
+            onClick={() => setOpen((o) => !o)}
+          >
+            <svg viewBox="0 0 24 24" className="size-6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden>
+              {open ? (
+                <path d="M6 6l12 12M18 6L6 18" />
+              ) : (
+                <path d="M4 7h16M4 12h16M4 17h16" />
+              )}
+            </svg>
+          </button>
+          <Link href="/" className="display text-[1.625rem] leading-none md:text-[1.875rem]" aria-label={`${name} home`}>
+            {name}
+          </Link>
+        </div>
 
         <nav aria-label="Main" className="hidden items-center gap-8 lg:flex">
           {NAV.map((n) => (
@@ -68,15 +87,6 @@ export function Header({ name }: { name: string }) {
               {ready ? count : 0}
             </span>
           </Link>
-          <button
-            type="button"
-            className="flex h-11 items-center px-3 text-[0.9375rem] lg:hidden"
-            aria-expanded={open}
-            aria-controls="mobile-nav"
-            onClick={() => setOpen((o) => !o)}
-          >
-            {open ? "Close" : "Menu"}
-          </button>
         </div>
       </div>
 
@@ -91,6 +101,9 @@ export function Header({ name }: { name: string }) {
                 {n.label}
               </Link>
             ))}
+            <Link href="/gift-cards" className="display border-b border-rule py-4 text-[2.25rem]">
+              Gift cards
+            </Link>
             <Link href="/order/lookup" className="mt-8 text-stone underline underline-offset-4">
               Find my order
             </Link>
