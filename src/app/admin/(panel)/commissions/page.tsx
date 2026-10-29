@@ -6,6 +6,7 @@ import { getSettings } from "@/lib/settings";
 import { SubmitButton } from "@/components/admin/buttons";
 import { Checkbox, Flash, Input, PageTitle, Panel, Textarea } from "@/components/admin/ui";
 import { saveCommissionsAction } from "../../actions";
+import { bookedThisMonth, currentMonthName } from "@/lib/commissions";
 
 export const metadata = { title: "Commissions" };
 
@@ -44,6 +45,26 @@ export default async function CommissionsAdmin({ searchParams }: { searchParams:
               defaultChecked={s.commissionsOpen}
               hint="When on, the Commissions page shows an enquiry form. When off, it says commissions are closed and invites visitors to join the Collector List instead."
             />
+            <div className="grid gap-5 sm:grid-cols-2">
+              <Input
+                label="Commission places per month"
+                name="commissionsCapacity"
+                type="number"
+                min={0}
+                max={20}
+                defaultValue={s.commissionsCapacity}
+                hint="Shown as a bar on the Commissions page. 0 hides the bar."
+              />
+              <Input
+                label={`Booked for ${currentMonthName()}`}
+                name="commissionsBooked"
+                type="number"
+                min={0}
+                max={20}
+                defaultValue={bookedThisMonth(s)}
+                hint="Each one fills a segment. Resets to 0 automatically on the 1st of next month."
+              />
+            </div>
             <Input
               label="Note while closed (optional)"
               name="commissionsClosedNote"

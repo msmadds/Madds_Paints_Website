@@ -21,6 +21,7 @@ import {
 } from "@/lib/orders";
 import { sendPaymentConfirmed } from "@/lib/email";
 import { deliverGiftCardsForOrder, giftCardExpiry, insertGiftCard } from "@/lib/gift-cards";
+import { currentMonthKey } from "@/lib/commissions";
 import { sendGiftCard } from "@/lib/email";
 import { orderStatus } from "@/db/schema";
 
@@ -535,13 +536,25 @@ export async function saveCommissionsAction(fd: FormData) {
   await requireAdmin();
   const ids = [...new Set(fd.getAll("commissionArtworkIds").map(String))];
   const parsed = settingsSchema
-    .pick({ commissionsOpen: true, commissionsIntro: true, commissionsProcess: true, commissionsClosedNote: true, commissionArtworkIds: true })
+    .pick({
+      commissionsOpen: true,
+      commissionsIntro: true,
+      commissionsProcess: true,
+      commissionsClosedNote: true,
+      commissionArtworkIds: true,
+      commissionsCapacity: true,
+      commissionsBooked: true,
+      commissionsBookedMonth: true,
+    })
     .safeParse({
       commissionsOpen: bool(fd, "commissionsOpen"),
       commissionsIntro: str(fd, "commissionsIntro"),
       commissionsProcess: str(fd, "commissionsProcess"),
       commissionsClosedNote: str(fd, "commissionsClosedNote"),
       commissionArtworkIds: ids,
+      commissionsCapacity: str(fd, "commissionsCapacity") || "0",
+      commissionsBooked: str(fd, "commissionsBooked") || "0",
+      commissionsBookedMonth: currentMonthKey(),
     });
   if (!parsed.success) {
     back("/admin/commissions", "error", parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "));

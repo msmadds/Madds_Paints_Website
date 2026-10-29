@@ -5,6 +5,8 @@ import { listCommissionWorks, primaryImage } from "@/lib/catalog";
 import { ArtImage } from "@/components/site/art-image";
 import { CollectorSignup } from "@/components/site/collector-signup";
 import { ContactForm } from "../contact/contact-form";
+import { bookedThisMonth, currentMonthName } from "@/lib/commissions";
+import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "Commissions",
@@ -14,6 +16,9 @@ export const metadata: Metadata = {
 export default async function CommissionsPage() {
   const s = await getSettings();
   const works = await listCommissionWorks(s.commissionArtworkIds);
+  const capacity = s.commissionsCapacity;
+  const booked = bookedThisMonth(s);
+  const full = capacity > 0 && booked >= capacity;
   const intro = s.commissionsIntro.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
   const steps = s.commissionsProcess
     .split("\n")
@@ -21,7 +26,8 @@ export default async function CommissionsPage() {
     .filter(Boolean)
     .map((line) => {
       const [title, ...rest] = line.split(/\s+[—–-]\s+/);
-      return { title, body: rest.join(" — ") };
+      const body = rest.join(" — ");
+      return { title, body: body.charAt(0).toUpperCase() + body.slice(1) };
     });
 
   return (
@@ -48,9 +54,34 @@ export default async function CommissionsPage() {
           {intro.map((p, i) => (
             <p key={i}>{p}</p>
           ))}
+          {s.commissionsOpen && capacity > 0 && (
+            <div className="mt-8 max-w-md" role="group" aria-label="Commission places this month">
+              <div className="flex items-baseline justify-between gap-4 text-[0.9375rem]">
+                <span className="font-semibold">{currentMonthName()}</span>
+                <span className="text-stone">
+                  {full ? "Fully booked" : `${capacity - booked} of ${capacity} place${capacity === 1 ? "" : "s"} left`}
+                </span>
+              </div>
+              <div
+                className="mt-2 flex gap-1.5"
+                role="meter"
+                aria-valuemin={0}
+                aria-valuemax={capacity}
+                aria-valuenow={booked}
+                aria-valuetext={`${booked} of ${capacity} commission places taken`}
+              >
+                {Array.from({ length: capacity }, (_, i) => (
+                  <span key={i} className={cn("h-2.5 flex-1 rounded-full", i < booked ? "bg-graphite" : "bg-plinth ring-1 ring-rule ring-inset")} />
+                ))}
+              </div>
+              {full && (
+                <p className="mt-2 text-[0.875rem] text-stone">This month is full. New enquiries are scheduled for the next available month.</p>
+              )}
+            </div>
+          )}
           {s.commissionsOpen && (
-            <a href="#enquire" className="btn btn-primary mt-4">
-              Start a commission
+            <a href="#enquire" className="btn btn-primary mt-6">
+              {full ? "Enquire for next month" : "Start a commission"}
             </a>
           )}
         </div>

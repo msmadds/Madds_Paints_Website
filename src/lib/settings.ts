@@ -110,6 +110,11 @@ export const settingsSchema = z.object({
         "Delivery — wrapped and delivered by hand within Dar es Salaam, or shipped to you.",
       ].join("\n"),
     ),
+  /** Commission places per month, shown as a capacity bar. 0 hides the bar. */
+  commissionsCapacity: z.coerce.number().int().min(0).max(20).default(3),
+  /** Places taken in `commissionsBookedMonth` (YYYY-MM, Dar es Salaam time). Counts as 0 in any other month. */
+  commissionsBooked: z.coerce.number().int().min(0).max(20).default(0),
+  commissionsBookedMonth: z.string().max(7).default(""),
   /** Shown while commissions are closed, e.g. "Reopening in January." */
   commissionsClosedNote: z.string().max(400).default(""),
   /** Artworks shown under "Past commissions", in this order. */
