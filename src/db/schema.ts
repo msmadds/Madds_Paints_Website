@@ -165,6 +165,42 @@ export const printVariants = pgTable(
   (t) => [index("print_variants_product_idx").on(t.printProductId)],
 );
 
+/** A named group of artworks (a series), shown on /collections/[slug]. */
+export const collections = pgTable(
+  "collections",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    slug: varchar("slug", { length: 160 }).notNull(),
+    title: varchar("title", { length: 200 }).notNull(),
+    description: text("description").notNull().default(""),
+    /** Artwork whose main image represents the collection. Null = first work. */
+    coverArtworkId: uuid("cover_artwork_id").references(() => artworks.id, { onDelete: "set null" }),
+    published: boolean("published").notNull().default(true),
+    sortOrder: integer("sort_order").notNull().default(0),
+    ...timestamps,
+  },
+  (t) => [uniqueIndex("collections_slug_idx").on(t.slug)],
+);
+
+/** Tags an artwork as part of a collection. An artwork can be in several. */
+export const artworkCollections = pgTable(
+  "artwork_collections",
+  {
+    artworkId: uuid("artwork_id")
+      .notNull()
+      .references(() => artworks.id, { onDelete: "cascade" }),
+    collectionId: uuid("collection_id")
+      .notNull()
+      .references(() => collections.id, { onDelete: "cascade" }),
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("artwork_collections_pair_idx").on(t.collectionId, t.artworkId),
+    index("artwork_collections_artwork_idx").on(t.artworkId),
+  ],
+);
+
 /* ------------------------------------------------------------------ */
 /* Orders & payments                                                  */
 /* ------------------------------------------------------------------ */
@@ -431,6 +467,7 @@ export const loginAttempts = pgTable(
 
 export const artworksRelations = relations(artworks, ({ many, one }) => ({
   images: many(artworkImages),
+  collections: many(artworkCollections),
   printProduct: one(printProducts, {
     fields: [artworks.id],
     references: [printProducts.artworkId],
@@ -439,6 +476,16 @@ export const artworksRelations = relations(artworks, ({ many, one }) => ({
 
 export const artworkImagesRelations = relations(artworkImages, ({ one }) => ({
   artwork: one(artworks, { fields: [artworkImages.artworkId], references: [artworks.id] }),
+}));
+
+export const collectionsRelations = relations(collections, ({ many, one }) => ({
+  artworks: many(artworkCollections),
+  cover: one(artworks, { fields: [collections.coverArtworkId], references: [artworks.id] }),
+}));
+
+export const artworkCollectionsRelations = relations(artworkCollections, ({ one }) => ({
+  artwork: one(artworks, { fields: [artworkCollections.artworkId], references: [artworks.id] }),
+  collection: one(collections, { fields: [artworkCollections.collectionId], references: [collections.id] }),
 }));
 
 export const printProductsRelations = relations(printProducts, ({ one, many }) => ({
@@ -488,6 +535,7 @@ export const giftCardRedemptionsRelations = relations(giftCardRedemptions, ({ on
 
 export type Artwork = typeof artworks.$inferSelect;
 export type ArtworkImage = typeof artworkImages.$inferSelect;
+export type Collection = typeof collections.$inferSelect;
 export type PrintProduct = typeof printProducts.$inferSelect;
 export type PrintVariant = typeof printVariants.$inferSelect;
 export type Order = typeof orders.$inferSelect;

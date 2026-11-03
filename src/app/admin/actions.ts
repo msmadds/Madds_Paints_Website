@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray, notInArray } from "drizzle-orm";
 import { z } from "zod";
 import { db, schema } from "@/db";
 import { login, logout, requireAdmin } from "@/lib/auth";
@@ -230,6 +230,128 @@ export async function deleteArtworkImage(fd: FormData) {
   if (img) await deleteImage(img.url);
   refreshShop();
   back(`/admin/artworks/${artworkId}`, "ok", "Image removed.");
+}
+
+/** Tag an artwork into the ticked collections (from the artwork's edit page). */
+export async function saveArtworkCollections(fd: FormData) {
+  await requireAdmin();
+  const artworkId = str(fd, "artworkId");
+  const ids = [...new Set(fd.getAll("collectionIds").map(String))].filter((v) => z.uuid().safeParse(v).success);
+  await db.transaction(async (tx) => {
+    await tx
+      .delete(schema.artworkCollections)
+      .where(
+        and(
+          eq(schema.artworkCollections.artworkId, artworkId),
+          ids.length ? notInArray(schema.artworkCollections.collectionId, ids) : undefined,
+        ),
+      );
+    if (ids.length) {
+      await tx
+        .insert(schema.artworkCollections)
+        .values(ids.map((collectionId) => ({ artworkId, collectionId, sortOrder: 1000 }))) // after the works already placed
+        .onConflictDoNothing();
+    }
+  });
+  refreshShop();
+  back(`/admin/artworks/${artworkId}`, "ok", "Collections saved.");
+}
+
+/* ------------------------------------------------------------------ */
+/* collections                                                        */
+/* ------------------------------------------------------------------ */
+
+function parseCollection(fd: FormData) {
+  const title = str(fd, "title");
+  const errors: string[] = [];
+  if (!title) errors.push("Enter a name for the collection.");
+  const sortOrder = optInt(fd, "sortOrder") ?? 0;
+  const cover = str(fd, "coverArtworkId");
+  return {
+    errors,
+    values: {
+      title: title.slice(0, 200),
+      slug: slugify(str(fd, "slug") || title) || `collection-${Date.now()}`,
+      description: str(fd, "description").slice(0, 8000),
+      coverArtworkId: z.uuid().safeParse(cover).success ? cover : null,
+      published: bool(fd, "published"),
+      sortOrder: Number.isNaN(sortOrder) ? 0 : sortOrder,
+    },
+  };
+}
+
+/** Replace a collection's works with the ticked artworks; their order on the form becomes the display order. */
+async function setCollectionWorks(collectionId: string, artworkIds: string[]) {
+  const ids = [...new Set(artworkIds)].filter((v) => z.uuid().safeParse(v).success);
+  await db.transaction(async (tx) => {
+    await tx
+      .delete(schema.artworkCollections)
+      .where(
+        and(
+          eq(schema.artworkCollections.collectionId, collectionId),
+          ids.length ? notInArray(schema.artworkCollections.artworkId, ids) : undefined,
+        ),
+      );
+    if (!ids.length) return;
+    const existing = await tx
+      .select({ artworkId: schema.artworkCollections.artworkId })
+      .from(schema.artworkCollections)
+      .where(and(eq(schema.artworkCollections.collectionId, collectionId), inArray(schema.artworkCollections.artworkId, ids)));
+    const have = new Set(existing.map((e) => e.artworkId));
+    for (const [idx, artworkId] of ids.entries()) {
+      if (have.has(artworkId)) {
+        await tx
+          .update(schema.artworkCollections)
+          .set({ sortOrder: idx })
+          .where(and(eq(schema.artworkCollections.collectionId, collectionId), eq(schema.artworkCollections.artworkId, artworkId)));
+      } else {
+        await tx.insert(schema.artworkCollections).values({ collectionId, artworkId, sortOrder: idx });
+      }
+    }
+  });
+}
+
+export async function createCollection(fd: FormData) {
+  await requireAdmin();
+  const { errors, values } = parseCollection(fd);
+  if (errors.length) back("/admin/collections", "error", errors.join(" "));
+  let id: string;
+  try {
+    const [row] = await db.insert(schema.collections).values(values).returning({ id: schema.collections.id });
+    id = row.id;
+  } catch (err) {
+    if (isUniqueViolation(err)) back("/admin/collections", "error", "That URL slug is already used by another collection.");
+    throw err;
+  }
+  refreshShop();
+  back(`/admin/collections/${id}`, "ok", "Collection created. Tick the paintings that belong to it below.");
+}
+
+export async function updateCollection(fd: FormData) {
+  const admin = await requireAdmin();
+  const id = str(fd, "id");
+  const path = `/admin/collections/${id}`;
+  const { errors, values } = parseCollection(fd);
+  if (errors.length) back(path, "error", errors.join(" "));
+  try {
+    await db.update(schema.collections).set({ ...values, updatedAt: new Date() }).where(eq(schema.collections.id, id));
+  } catch (err) {
+    if (isUniqueViolation(err)) back(path, "error", "That URL slug is already used by another collection.");
+    throw err;
+  }
+  await setCollectionWorks(id, fd.getAll("artworkIds").map(String));
+  console.info(`[admin] ${admin.email} updated collection ${id}`);
+  refreshShop();
+  back(path, "ok", "Saved.");
+}
+
+export async function deleteCollection(fd: FormData) {
+  await requireAdmin();
+  const id = str(fd, "id");
+  const [c] = await db.delete(schema.collections).where(eq(schema.collections.id, id)).returning();
+  if (!c) back("/admin/collections", "error", "Collection not found.");
+  refreshShop();
+  back("/admin/collections", "ok", `Deleted the collection “${c.title}”. The paintings themselves are unchanged.`);
 }
 
 /* ------------------------------------------------------------------ */

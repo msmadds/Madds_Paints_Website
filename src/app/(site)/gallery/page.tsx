@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { listGallery, primaryImage } from "@/lib/catalog";
+import { listCollections, listGallery, primaryImage } from "@/lib/catalog";
 import { ArtImage } from "@/components/site/art-image";
 import { StatusMark } from "@/components/site/status-mark";
 import { FilterLinks } from "@/components/shop/shop-tabs";
@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 
 export default async function GalleryPage({ searchParams }: { searchParams: Promise<{ show?: string }> }) {
   const { show = "all" } = await searchParams;
-  const all = await listGallery();
+  const [all, collections] = await Promise.all([listGallery(), listCollections()]);
   const works =
     show === "available" ? all.filter((w) => w.status === "available" && w.price !== null)
     : show === "sold" ? all.filter((w) => w.status === "sold")
@@ -26,6 +26,11 @@ export default async function GalleryPage({ searchParams }: { searchParams: Prom
           <p className="mt-3 max-w-xl text-stone">
             The body of work, hung together. A red dot marks a painting that has found its home.
           </p>
+          {collections.length > 0 && (
+            <p className="mt-3">
+              <Link href="/collections" className="link">Browse by collection</Link>
+            </p>
+          )}
         </div>
         <FilterLinks
           base="/gallery"

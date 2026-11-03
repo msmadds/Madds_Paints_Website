@@ -16,6 +16,7 @@ import {
   deleteArtworkImage,
   deletePrintVariant,
   makeMainImage,
+  saveArtworkCollections,
   savePrintProduct,
   updateArtwork,
   updateImageAlt,
@@ -38,6 +39,11 @@ export default async function EditArtwork({ params, searchParams }: Props) {
     },
   });
   if (!a) notFound();
+  const [allCollections, links] = await Promise.all([
+    db.query.collections.findMany({ orderBy: [asc(schema.collections.sortOrder), asc(schema.collections.title)] }),
+    db.query.artworkCollections.findMany({ where: eq(schema.artworkCollections.artworkId, a.id) }),
+  ]);
+  const inCollections = new Set(links.map((l) => l.collectionId));
   const holdOrder = a.holdOrderId ? await db.query.orders.findFirst({ where: eq(schema.orders.id, a.holdOrderId) }) : null;
   const soldOrder = a.soldOrderId ? await db.query.orders.findFirst({ where: eq(schema.orders.id, a.soldOrderId) }) : null;
   const p = a.printProduct;
@@ -114,6 +120,32 @@ export default async function EditArtwork({ params, searchParams }: Props) {
             </ul>
           )}
           <ImageUploader artworkId={a.id} title={a.title} blobEnabled={blobEnabled} />
+        </Panel>
+
+        <Panel title="Collections" description="Tag this painting into one or more collections. Manage collections under Collections.">
+          {allCollections.length === 0 ? (
+            <p className="text-[0.9375rem] text-stone">
+              No collections yet. <Link href="/admin/collections" className="link">Create one</Link>.
+            </p>
+          ) : (
+            <form action={saveArtworkCollections}>
+              <input type="hidden" name="artworkId" value={a.id} />
+              <div className="grid gap-3 sm:grid-cols-2">
+                {allCollections.map((c) => (
+                  <Checkbox
+                    key={c.id}
+                    id={`col-${c.id}`}
+                    label={c.title}
+                    hint={c.published ? undefined : "Hidden collection"}
+                    name="collectionIds"
+                    value={c.id}
+                    defaultChecked={inCollections.has(c.id)}
+                  />
+                ))}
+              </div>
+              <div className="mt-5"><SubmitButton variant="secondary">Save collections</SubmitButton></div>
+            </form>
+          )}
         </Panel>
 
         <Panel title="Prints" description="Prints stay on sale even after the original is sold.">
