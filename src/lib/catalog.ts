@@ -93,6 +93,17 @@ export async function getArtworkBySlug(slug: string): Promise<ArtworkFull | null
   return (a as ArtworkFull | undefined) ?? null;
 }
 
+/** Painting shown beside the Collector List pop-up: the first featured work with an image. */
+export async function popupArtwork() {
+  const rows = await db.query.artworks.findMany({
+    where: and(eq(schema.artworks.published, true), eq(schema.artworks.featured, true)),
+    with: { images: { orderBy: [asc(schema.artworkImages.sortOrder)], limit: 1 } },
+    orderBy: order,
+    limit: 6,
+  });
+  return rows.find((a) => a.images.length) ?? null;
+}
+
 export async function listDeliveryZones() {
   await connection();
   return db.query.deliveryZones.findMany({

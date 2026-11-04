@@ -2,7 +2,16 @@
 
 import { useState } from "react";
 
-export function CollectorSignup({ id = "collector" }: { id?: string }) {
+export function CollectorSignup({
+  id = "collector",
+  stacked = false,
+  onJoined,
+}: {
+  id?: string;
+  /** One column with a full-width button, for narrow spaces such as the pop-up. */
+  stacked?: boolean;
+  onJoined?: () => void;
+}) {
   const [state, setState] = useState<"idle" | "busy" | "sent">("idle");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
@@ -22,6 +31,7 @@ export function CollectorSignup({ id = "collector" }: { id?: string }) {
     if (res?.ok) {
       form.reset();
       setState("sent");
+      onJoined?.();
       return;
     }
     setErrors(data.fields ?? {});
@@ -40,7 +50,7 @@ export function CollectorSignup({ id = "collector" }: { id?: string }) {
 
   return (
     <form onSubmit={submit} className="space-y-4" noValidate>
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className={stacked ? "grid gap-4" : "grid gap-4 sm:grid-cols-2"}>
         <div>
           <label htmlFor={`${id}-email`} className="field-label">Email</label>
           <input id={`${id}-email`} name="email" type="email" inputMode="email" autoComplete="email" required className="field" aria-invalid={errors.email ? true : undefined} />
@@ -55,7 +65,7 @@ export function CollectorSignup({ id = "collector" }: { id?: string }) {
         <label>Website <input name="website" tabIndex={-1} autoComplete="off" /></label>
       </div>
       {error && !Object.keys(errors).length && <p role="alert" className="field-error">{error}</p>}
-      <button type="submit" className="btn btn-primary" disabled={state === "busy"}>
+      <button type="submit" className={stacked ? "btn btn-primary w-full" : "btn btn-primary"} disabled={state === "busy"}>
         {state === "busy" ? "Joining…" : "Join the Collector List"}
       </button>
       <p className="text-[0.8125rem] text-stone">

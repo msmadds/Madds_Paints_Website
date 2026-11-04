@@ -3,11 +3,13 @@ import Link from "next/link";
 import { CartProvider } from "@/components/shop/cart-context";
 import { Header } from "@/components/site/header";
 import { Footer } from "@/components/site/footer";
+import { CollectorPopup } from "@/components/site/collector-popup";
+import { popupArtwork } from "@/lib/catalog";
 import { getSettings } from "@/lib/settings";
 import { PROMOTION, promotionActive } from "@/lib/promotion";
 
 export default async function SiteLayout({ children }: { children: React.ReactNode }) {
-  const settings = await getSettings();
+  const [settings, art] = await Promise.all([getSettings(), popupArtwork()]);
   return (
     <CartProvider>
       <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:bg-wall focus:p-3">
@@ -21,6 +23,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
       <Header name={settings.businessName} />
       <main id="main">{children}</main>
       <Footer settings={settings} />
+      <CollectorPopup image={art?.images[0] ?? null} title={art?.title} />
       <Analytics />
     </CartProvider>
   );
