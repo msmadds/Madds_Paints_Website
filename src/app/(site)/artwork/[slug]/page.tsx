@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getArtworkBySlug, isOriginalPurchasable, primaryImage, printFromPrice } from "@/lib/catalog";
+import { collectionsForArtwork, getArtworkBySlug, isOriginalPurchasable, primaryImage, printFromPrice } from "@/lib/catalog";
 import { getSettings } from "@/lib/settings";
 import { formatDimensions, formatMoney } from "@/lib/format";
 import { PROMOTION, promotionActive, salePrice } from "@/lib/promotion";
@@ -27,6 +27,7 @@ export default async function ArtworkPage({ params }: Props) {
   const { slug } = await params;
   const [a, settings] = await Promise.all([getArtworkBySlug(slug), getSettings()]);
   if (!a) notFound();
+  const inCollections = await collectionsForArtwork(a.id);
 
   const purchasable = isOriginalPurchasable(a);
   const dims = formatDimensions(a.widthCm, a.heightCm, a.depthCm);
@@ -53,6 +54,17 @@ export default async function ArtworkPage({ params }: Props) {
           <div className="lg:sticky lg:top-28">
             <h1 className="work-title text-[2.5rem] leading-[1.05] md:text-[3.25rem]">{a.title}</h1>
             <p className="mt-2 text-stone">{a.artistName}</p>
+            {inCollections.length > 0 && (
+              <p className="mt-1 text-[0.9375rem] text-stone">
+                Part of{" "}
+                {inCollections.map((c, i) => (
+                  <span key={c.slug}>
+                    {i > 0 && ", "}
+                    <Link href={`/collections/${c.slug}`} className="link">{c.title}</Link>
+                  </span>
+                ))}
+              </p>
+            )}
 
             <dl className="mt-8 grid grid-cols-[7rem_1fr] gap-y-2 border-t border-rule pt-6 text-[0.9375rem]">
               <dt className="text-stone">Medium</dt>
