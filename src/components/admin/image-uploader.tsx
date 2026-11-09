@@ -3,7 +3,7 @@
 import { uploadPresigned } from "@vercel/blob/client";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { addArtworkImage } from "@/app/admin/actions";
+import { addArtworkImage, addCommissionImage } from "@/app/admin/actions";
 
 async function dimensions(file: File): Promise<{ width: number; height: number }> {
   try {
@@ -35,7 +35,21 @@ async function toUploadable(file: File): Promise<File> {
   }
 }
 
-export function ImageUploader({ artworkId, title, blobEnabled }: { artworkId: string; title: string; blobEnabled: boolean }) {
+/** Artwork photos by default; pass `commissionId` to upload draft images for a commission instead. */
+export function ImageUploader({
+  artworkId,
+  commissionId,
+  title,
+  blobEnabled,
+  label = "Choose artwork photos",
+}: {
+  artworkId?: string;
+  commissionId?: string;
+  title: string;
+  blobEnabled: boolean;
+  label?: string;
+}) {
+  const folder = commissionId ? "commissions" : "artworks";
   const router = useRouter();
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -55,7 +69,7 @@ export function ImageUploader({ artworkId, title, blobEnabled }: { artworkId: st
         let url: string;
         if (blobEnabled) {
           const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-          const blob = await uploadPresigned(`artworks/${artworkId}.${ext}`, file, {
+          const blob = await uploadPresigned(`${folder}/${commissionId ?? artworkId}.${ext}`, file, {
             access: "public",
             handleUploadUrl: "/api/admin/blob",
             contentType: file.type,
@@ -65,12 +79,14 @@ export function ImageUploader({ artworkId, title, blobEnabled }: { artworkId: st
         } else {
           const fd = new FormData();
           fd.append("file", file);
+          fd.append("folder", folder);
           const res = await fetch("/api/admin/local-upload", { method: "POST", body: fd });
           const data = await res.json();
           if (!res.ok) throw new Error(data.error ?? "Upload failed.");
           url = data.url;
         }
-        await addArtworkImage({ artworkId, url, width, height, alt: `${title} by MedePaints` });
+        if (commissionId) await addCommissionImage({ jobId: commissionId, url, width, height });
+        else await addArtworkImage({ artworkId: artworkId!, url, width, height, alt: `${title} by MedePaints` });
       }
       setStatus("Uploaded.");
       router.refresh();
@@ -84,7 +100,7 @@ export function ImageUploader({ artworkId, title, blobEnabled }: { artworkId: st
   return (
     <div>
       <label className="flex min-h-28 cursor-pointer flex-col items-center justify-center border border-dashed border-stone bg-wall px-4 py-6 text-center hover:border-graphite">
-        <span className="font-semibold">{busy ? status : "Choose artwork photos"}</span>
+        <span className="font-semibold">{busy ? status : label}</span>
         <span className="mt-1 text-[0.8125rem] text-stone">JPG, PNG, WebP, AVIF or HEIC (iPhone). Use the largest, sharpest photo you have (up to 25 MB).</span>
         <input type="file" accept="image/jpeg,image/png,image/webp,image/avif,image/heic,image/heif,.heic,.heif" multiple className="sr-only" disabled={busy} onChange={(e) => onFiles(e.target.files)} />
       </label>

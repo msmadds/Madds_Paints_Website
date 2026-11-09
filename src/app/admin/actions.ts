@@ -686,9 +686,47 @@ export async function deleteCommissionPayment(fd: FormData) {
 
 export async function deleteCommissionJob(fd: FormData) {
   await requireAdmin();
-  const [job] = await db.delete(schema.commissionJobs).where(eq(schema.commissionJobs.id, str(fd, "id"))).returning();
+  const id = str(fd, "id");
+  const images = await db.query.commissionImages.findMany({ where: eq(schema.commissionImages.jobId, id) });
+  const [job] = await db.delete(schema.commissionJobs).where(eq(schema.commissionJobs.id, id)).returning();
   if (!job) back("/admin/commission-tracker", "error", "Commission not found.");
-  back("/admin/commission-tracker", "ok", `Deleted the commission for ${job.clientName} and its payments.`);
+  for (const img of images) await deleteImage(img.url);
+  back("/admin/commission-tracker", "ok", `Deleted the commission for ${job.clientName}, its payments and drafts.`);
+}
+
+export async function addCommissionImage(input: { jobId: string; url: string; width: number; height: number }) {
+  await requireAdmin();
+  const parsed = z
+    .object({
+      jobId: z.uuid(),
+      url: z.string().refine((u) => u.startsWith("https://") || u.startsWith("/uploads/"), "Invalid image URL"),
+      width: z.number().int().positive().max(20000),
+      height: z.number().int().positive().max(20000),
+    })
+    .parse(input);
+  await db.insert(schema.commissionImages).values(parsed);
+  return { ok: true };
+}
+
+export async function updateCommissionImageCaption(fd: FormData) {
+  await requireAdmin();
+  const jobId = str(fd, "jobId");
+  await db
+    .update(schema.commissionImages)
+    .set({ caption: str(fd, "caption").slice(0, 300) })
+    .where(and(eq(schema.commissionImages.id, str(fd, "imageId")), eq(schema.commissionImages.jobId, jobId)));
+  back(`/admin/commission-tracker/${jobId}`, "ok", "Caption saved.");
+}
+
+export async function deleteCommissionImage(fd: FormData) {
+  await requireAdmin();
+  const jobId = str(fd, "jobId");
+  const [img] = await db
+    .delete(schema.commissionImages)
+    .where(and(eq(schema.commissionImages.id, str(fd, "imageId")), eq(schema.commissionImages.jobId, jobId)))
+    .returning();
+  if (img) await deleteImage(img.url);
+  back(`/admin/commission-tracker/${jobId}`, "ok", "Draft image removed.");
 }
 
 /* ------------------------------------------------------------------ */

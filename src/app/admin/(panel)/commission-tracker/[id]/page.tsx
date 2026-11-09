@@ -1,13 +1,23 @@
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { asc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { COMMISSION_JOB_STATUS_LABELS, formatDate, formatMoney } from "@/lib/format";
 import { balanceDue, contactSuggestions, isOverdue, paidSoFar } from "@/lib/commission-tracker";
+import { blobConfigured } from "@/lib/storage";
 import { SubmitButton } from "@/components/admin/buttons";
+import { ImageUploader } from "@/components/admin/image-uploader";
 import { CommissionJobFields, CommissionPaymentFields } from "@/components/admin/commission-job-fields";
 import { Flash, PageTitle, Panel, Pill } from "@/components/admin/ui";
-import { addCommissionPayment, deleteCommissionJob, deleteCommissionPayment, updateCommissionJob } from "../../../actions";
+import {
+  addCommissionPayment,
+  deleteCommissionImage,
+  deleteCommissionJob,
+  deleteCommissionPayment,
+  updateCommissionImageCaption,
+  updateCommissionJob,
+} from "../../../actions";
 
 export const metadata = { title: "Commission" };
 
@@ -20,7 +30,10 @@ export default async function CommissionJobPage({ params, searchParams }: Props)
   const [job, suggestions] = await Promise.all([
     db.query.commissionJobs.findFirst({
       where: eq(schema.commissionJobs.id, id),
-      with: { payments: { orderBy: [asc(schema.commissionPayments.paidOn), asc(schema.commissionPayments.createdAt)] } },
+      with: {
+        payments: { orderBy: [asc(schema.commissionPayments.paidOn), asc(schema.commissionPayments.createdAt)] },
+        images: { orderBy: [asc(schema.commissionImages.createdAt)] },
+      },
     }),
     contactSuggestions(),
   ]);
@@ -51,6 +64,33 @@ export default async function CommissionJobPage({ params, searchParams }: Props)
       {isOverdue(job) && <p className="-mt-4 mb-8 text-[0.9375rem] text-reddot">This commission was due on {formatDate(job.dueOn)}.</p>}
 
       <div className="grid gap-8">
+        <Panel title="Drafts" description="Sketches, mock-ups and progress photos to share with the client. Only you can see them here.">
+          {job.images.length > 0 && (
+            <ul className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {job.images.map((img, i) => (
+                <li key={img.id} className="border border-rule p-3">
+                  <a href={img.url} target="_blank" rel="noreferrer" className="flex aspect-square items-center justify-center bg-plinth" title="Open full size">
+                    <Image src={img.url} alt={img.caption || `Draft ${i + 1}`} width={img.width ?? 600} height={img.height ?? 600} sizes="300px" className="max-h-full w-auto" />
+                  </a>
+                  <p className="mt-2 text-[0.8125rem] text-stone">Draft {i + 1}, added {formatDate(img.createdAt)}</p>
+                  <form action={updateCommissionImageCaption} className="mt-2 flex gap-2">
+                    <input type="hidden" name="jobId" value={job.id} />
+                    <input type="hidden" name="imageId" value={img.id} />
+                    <input name="caption" defaultValue={img.caption} placeholder="Caption, e.g. first sketch" aria-label="Caption" className="field min-h-10 py-1.5 text-[0.875rem]" />
+                    <SubmitButton variant="quiet" pendingText="…">Save</SubmitButton>
+                  </form>
+                  <form action={deleteCommissionImage} className="mt-1">
+                    <input type="hidden" name="jobId" value={job.id} />
+                    <input type="hidden" name="imageId" value={img.id} />
+                    <SubmitButton variant="quiet" pendingText="…" confirm="Remove this draft image?">Remove</SubmitButton>
+                  </form>
+                </li>
+              ))}
+            </ul>
+          )}
+          <ImageUploader commissionId={job.id} title={job.title} blobEnabled={blobConfigured()} label="Upload draft images" />
+        </Panel>
+
         <Panel title="Payments" description="Record each amount as it comes in, such as the deposit and then the balance.">
           {job.payments.length > 0 ? (
             <ul className="mb-6 divide-y divide-rule border border-rule">

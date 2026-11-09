@@ -463,6 +463,23 @@ export const commissionPayments = pgTable(
   (t) => [index("commission_payments_job_idx").on(t.jobId)],
 );
 
+/** Draft sketches and progress photos for a commission (admin only). */
+export const commissionImages = pgTable(
+  "commission_images",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    jobId: uuid("job_id")
+      .notNull()
+      .references(() => commissionJobs.id, { onDelete: "cascade" }),
+    url: text("url").notNull(),
+    width: integer("width"),
+    height: integer("height"),
+    caption: varchar("caption", { length: 300 }).notNull().default(""),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("commission_images_job_idx").on(t.jobId)],
+);
+
 /* ------------------------------------------------------------------ */
 /* Collector list, contact, settings, security                        */
 /* ------------------------------------------------------------------ */
@@ -580,6 +597,11 @@ export const orderEventsRelations = relations(orderEvents, ({ one }) => ({
 
 export const commissionJobsRelations = relations(commissionJobs, ({ many }) => ({
   payments: many(commissionPayments),
+  images: many(commissionImages),
+}));
+
+export const commissionImagesRelations = relations(commissionImages, ({ one }) => ({
+  job: one(commissionJobs, { fields: [commissionImages.jobId], references: [commissionJobs.id] }),
 }));
 
 export const commissionPaymentsRelations = relations(commissionPayments, ({ one }) => ({

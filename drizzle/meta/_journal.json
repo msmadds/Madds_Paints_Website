@@ -29,6 +29,13 @@
       "when": 1794218236361,
       "tag": "0003_commission_tracker",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794219200184,
+      "tag": "0004_commission_images",
+      "breakpoints": true
     }
   ]
 }

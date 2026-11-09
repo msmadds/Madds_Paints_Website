@@ -12,7 +12,7 @@ export async function POST(request: Request) {
   const file = form.get("file");
   if (!(file instanceof File)) return NextResponse.json({ error: "No file." }, { status: 400 });
   try {
-    const url = await uploadImage(file);
+    const url = await uploadImage(file, form.get("folder") === "commissions" ? "commissions" : "artworks");
     return NextResponse.json({ url });
   } catch (err) {
     return NextResponse.json({ error: (err as Error).message }, { status: 400 });

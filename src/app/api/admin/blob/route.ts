@@ -19,7 +19,7 @@ export async function POST(request: Request) {
       body,
       request,
       getSignedToken: async (pathname) => {
-        if (!pathname.startsWith("artworks/")) throw new Error("Invalid upload path.");
+        if (!pathname.startsWith("artworks/") && !pathname.startsWith("commissions/")) throw new Error("Invalid upload path.");
         const token = await issueSignedToken({
           pathname,
           operations: ["put"],
