@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { formatDate, formatMoney, ORDER_STATUS_LABELS } from "@/lib/format";
 import { Panel, PageTitle, Pill } from "@/components/admin/ui";
@@ -25,6 +25,15 @@ export default async function AdminHome() {
     .select({ total: sql<number>`coalesce(sum(${schema.orders.total}),0)::int` })
     .from(schema.orders)
     .where(eq(schema.orders.paymentStatus, "paid"));
+  // Originals marked Sold by hand (sold outside the website) have no order, so add their listed price.
+  // Website sales set sold_order_id and are already in the paid orders above.
+  const [offline] = await db
+    .select({
+      total: sql<number>`coalesce(sum(${schema.artworks.price}),0)::int`,
+      n: sql<number>`count(*)::int`,
+    })
+    .from(schema.artworks)
+    .where(and(eq(schema.artworks.status, "sold"), isNull(schema.artworks.soldOrderId)));
   const toVerify = await db.query.orders.findMany({
     where: eq(schema.orders.status, "payment_verification"),
     orderBy: [desc(schema.orders.updatedAt)],
@@ -61,7 +70,19 @@ export default async function AdminHome() {
           </Link>
         ))}
       </div>
-      <p className="mt-3 text-[0.875rem] text-stone">Paid sales to date: {formatMoney(revenue.total, settings.currency)}</p>
+      <div className="mt-3 border border-rule bg-white p-4">
+        <p className="text-[1.5rem] leading-none font-semibold tabular-nums">{formatMoney(revenue.total + offline.total, settings.currency)}</p>
+        <p className="mt-2 text-[0.8125rem] text-stone">
+          Total sales to date: {formatMoney(revenue.total, settings.currency)} in paid website orders
+          {offline.n > 0 && (
+            <>
+              {" "}+ {formatMoney(offline.total, settings.currency)} for {offline.n} painting{offline.n === 1 ? "" : "s"} marked sold outside the
+              website (at their listed price)
+            </>
+          )}
+          .
+        </p>
+      </div>
 
       <div className="mt-8 grid gap-6 lg:grid-cols-2">
         <Panel title="Payments to verify" description="Check each code against your M-Pesa statement before verifying.">
