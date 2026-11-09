@@ -131,7 +131,7 @@ export default async function CommissionTracker({ searchParams }: { searchParams
       )}
 
       <form action={createCommissionJob} id="new" className="mt-10 scroll-mt-6">
-        <Panel title="Add a commission" description="Only the client's name and what the commission is are required. You can fill in the rest later.">
+        <Panel title="Add a commission" description="Only the client's name and what the commission is are required. You can fill in the rest later. After saving, the commission opens so you can upload draft images.">
           <CommissionJobFields suggestions={suggestions} />
           <div className="mt-6 border-t border-rule pt-6">
             <CommissionPaymentFields optional />

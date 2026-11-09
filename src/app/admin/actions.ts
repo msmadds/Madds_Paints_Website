@@ -651,7 +651,10 @@ export async function createCommissionJob(fd: FormData) {
   const [row] = await db.insert(schema.commissionJobs).values(values).returning({ id: schema.commissionJobs.id });
   const payError = await insertCommissionPayment(row.id, fd);
   if (payError) back(`/admin/commission-tracker/${row.id}`, "error", `Commission saved, but the payment was not: ${payError}`);
-  back("/admin/commission-tracker", "ok", `Added the commission for ${values.clientName}.`);
+  // Straight to the new commission so draft images can be added (they need the saved commission).
+  redirect(
+    `/admin/commission-tracker/${row.id}?ok=${encodeURIComponent(`Added the commission for ${values.clientName}. You can upload draft images below.`)}#drafts`,
+  );
 }
 
 export async function updateCommissionJob(fd: FormData) {
