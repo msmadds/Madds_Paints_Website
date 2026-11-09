@@ -2,7 +2,7 @@ import Link from "next/link";
 import { desc } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { COMMISSION_JOB_STATUS_LABELS, formatDate, formatMoney } from "@/lib/format";
-import { balanceDue, isOpen, isOverdue, paidSoFar, todayKey, type JobWithPayments } from "@/lib/commission-tracker";
+import { balanceDue, contactSuggestions, isOpen, isOverdue, paidSoFar, todayKey, type JobWithPayments } from "@/lib/commission-tracker";
 import { SubmitButton } from "@/components/admin/buttons";
 import { CommissionJobFields, CommissionPaymentFields } from "@/components/admin/commission-job-fields";
 import { Flash, PageTitle, Panel, Pill } from "@/components/admin/ui";
@@ -21,10 +21,13 @@ const FILTERS: { value: string; label: string; test: (j: JobWithPayments) => boo
 
 export default async function CommissionTracker({ searchParams }: { searchParams: Promise<{ show?: string; ok?: string; error?: string }> }) {
   const { show, ...sp } = await searchParams;
-  const jobs = await db.query.commissionJobs.findMany({
-    orderBy: [desc(schema.commissionJobs.createdAt)],
-    with: { payments: { columns: { amount: true } } },
-  });
+  const [jobs, suggestions] = await Promise.all([
+    db.query.commissionJobs.findMany({
+      orderBy: [desc(schema.commissionJobs.createdAt)],
+      with: { payments: { columns: { amount: true } } },
+    }),
+    contactSuggestions(),
+  ]);
   const filter = FILTERS.find((f) => f.value === show) ?? FILTERS[0];
   const today = todayKey();
   const rows = jobs.filter(filter.test).sort((a, b) => {
@@ -129,7 +132,7 @@ export default async function CommissionTracker({ searchParams }: { searchParams
 
       <form action={createCommissionJob} id="new" className="mt-10 scroll-mt-6">
         <Panel title="Add a commission" description="Only the client's name and what the commission is are required. You can fill in the rest later.">
-          <CommissionJobFields />
+          <CommissionJobFields suggestions={suggestions} />
           <div className="mt-6 border-t border-rule pt-6">
             <CommissionPaymentFields optional />
           </div>

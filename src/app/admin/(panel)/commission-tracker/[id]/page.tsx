@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { asc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { COMMISSION_JOB_STATUS_LABELS, formatDate, formatMoney } from "@/lib/format";
-import { balanceDue, isOverdue, paidSoFar } from "@/lib/commission-tracker";
+import { balanceDue, contactSuggestions, isOverdue, paidSoFar } from "@/lib/commission-tracker";
 import { SubmitButton } from "@/components/admin/buttons";
 import { CommissionJobFields, CommissionPaymentFields } from "@/components/admin/commission-job-fields";
 import { Flash, PageTitle, Panel, Pill } from "@/components/admin/ui";
@@ -17,10 +17,13 @@ export default async function CommissionJobPage({ params, searchParams }: Props)
   const { id } = await params;
   const sp = await searchParams;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
-  const job = await db.query.commissionJobs.findFirst({
-    where: eq(schema.commissionJobs.id, id),
-    with: { payments: { orderBy: [asc(schema.commissionPayments.paidOn), asc(schema.commissionPayments.createdAt)] } },
-  });
+  const [job, suggestions] = await Promise.all([
+    db.query.commissionJobs.findFirst({
+      where: eq(schema.commissionJobs.id, id),
+      with: { payments: { orderBy: [asc(schema.commissionPayments.paidOn), asc(schema.commissionPayments.createdAt)] } },
+    }),
+    contactSuggestions(),
+  ]);
   if (!job) notFound();
   const paid = paidSoFar(job);
   const balance = balanceDue(job);
@@ -80,7 +83,7 @@ export default async function CommissionJobPage({ params, searchParams }: Props)
         <form action={updateCommissionJob}>
           <input type="hidden" name="id" value={job.id} />
           <Panel title="Details">
-            <CommissionJobFields job={job} />
+            <CommissionJobFields job={job} suggestions={suggestions} />
             <div className="mt-6"><SubmitButton>Save</SubmitButton></div>
           </Panel>
         </form>

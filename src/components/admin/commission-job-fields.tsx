@@ -1,12 +1,12 @@
 import type { CommissionJob } from "@/db/schema";
 import { COMMISSION_JOB_STATUS_LABELS } from "@/lib/format";
 import { Input, Select, Textarea } from "./ui";
+import { ClientContactFields, type ContactSuggestion } from "./client-contact-fields";
 
-export function CommissionJobFields({ job }: { job?: CommissionJob }) {
+export function CommissionJobFields({ job, suggestions }: { job?: CommissionJob; suggestions: ContactSuggestion[] }) {
   return (
     <div className="grid gap-5 md:grid-cols-6">
-      <Input label="Client name" name="clientName" defaultValue={job?.clientName} required className="md:col-span-3" />
-      <Input label="Phone, email or WhatsApp" name="clientContact" defaultValue={job?.clientContact} className="md:col-span-3" />
+      <ClientContactFields name={job?.clientName} contact={job?.clientContact} suggestions={suggestions} />
       <Input label="Commission" name="title" defaultValue={job?.title} required placeholder="Portrait of the family dog" className="md:col-span-4" />
       <Input label="Size" name="size" defaultValue={job?.size} placeholder="60 × 80 cm" className="md:col-span-2" />
       <Input
