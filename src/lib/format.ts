@@ -101,3 +101,12 @@ export function orderItemLabel(i: { itemType: "original" | "print" | "gift_card"
 export function isGiftCardOnly(items: { itemType: string }[]): boolean {
   return items.length > 0 && items.every((i) => i.itemType === "gift_card");
 }
+
+export const COMMISSION_JOB_STATUS_LABELS = {
+  enquiry: "Enquiry",
+  agreed: "Agreed",
+  in_progress: "In progress",
+  ready: "Ready",
+  delivered: "Delivered",
+  cancelled: "Cancelled",
+} as const;

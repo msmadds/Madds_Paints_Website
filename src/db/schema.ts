@@ -32,6 +32,7 @@ import {
   uniqueIndex,
   varchar,
   numeric,
+  date,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
@@ -409,6 +410,60 @@ export const giftCardRedemptions = pgTable(
 );
 
 /* ------------------------------------------------------------------ */
+/* Commission tracker (work agreed outside the website)               */
+/* ------------------------------------------------------------------ */
+
+export const commissionJobStatus = pgEnum("commission_job_status", [
+  "enquiry",
+  "agreed",
+  "in_progress",
+  "ready",
+  "delivered",
+  "cancelled",
+]);
+
+export const commissionJobs = pgTable(
+  "commission_jobs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    clientName: varchar("client_name", { length: 160 }).notNull(),
+    /** Phone, email or WhatsApp, as the artist prefers to reach the client. */
+    clientContact: varchar("client_contact", { length: 200 }).notNull().default(""),
+    title: varchar("title", { length: 200 }).notNull(),
+    details: text("details").notNull().default(""),
+    size: varchar("size", { length: 120 }).notNull().default(""),
+    /** Agreed price. Null while still an enquiry. */
+    price: integer("price"),
+    currency: varchar("currency", { length: 3 }).notNull().default("TZS"),
+    status: commissionJobStatus("status").notNull().default("agreed"),
+    agreedOn: date("agreed_on"),
+    dueOn: date("due_on"),
+    deliveredOn: date("delivered_on"),
+    notes: text("notes").notNull().default(""),
+    ...timestamps,
+  },
+  (t) => [index("commission_jobs_status_idx").on(t.status)],
+);
+
+/** Money received for a commission (deposit, balance, …). */
+export const commissionPayments = pgTable(
+  "commission_payments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    jobId: uuid("job_id")
+      .notNull()
+      .references(() => commissionJobs.id, { onDelete: "cascade" }),
+    amount: integer("amount").notNull(),
+    paidOn: date("paid_on").notNull(),
+    /** M-Pesa, cash, bank … */
+    method: varchar("method", { length: 60 }).notNull().default(""),
+    note: varchar("note", { length: 300 }).notNull().default(""),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("commission_payments_job_idx").on(t.jobId)],
+);
+
+/* ------------------------------------------------------------------ */
 /* Collector list, contact, settings, security                        */
 /* ------------------------------------------------------------------ */
 
@@ -523,6 +578,14 @@ export const orderEventsRelations = relations(orderEvents, ({ one }) => ({
   order: one(orders, { fields: [orderEvents.orderId], references: [orders.id] }),
 }));
 
+export const commissionJobsRelations = relations(commissionJobs, ({ many }) => ({
+  payments: many(commissionPayments),
+}));
+
+export const commissionPaymentsRelations = relations(commissionPayments, ({ one }) => ({
+  job: one(commissionJobs, { fields: [commissionPayments.jobId], references: [commissionJobs.id] }),
+}));
+
 export const giftCardsRelations = relations(giftCards, ({ one, many }) => ({
   purchaseOrder: one(orders, { fields: [giftCards.purchaseOrderId], references: [orders.id] }),
   redemptions: many(giftCardRedemptions),
@@ -546,4 +609,6 @@ export type Collector = typeof collectors.$inferSelect;
 export type GiftCard = typeof giftCards.$inferSelect;
 export type OrderStatus = (typeof orderStatus.enumValues)[number];
 export type PaymentStatus = (typeof paymentStatus.enumValues)[number];
+export type CommissionJob = typeof commissionJobs.$inferSelect;
+export type CommissionJobStatus = (typeof commissionJobStatus.enumValues)[number];
 export type ArtworkStatus = (typeof artworkStatus.enumValues)[number];

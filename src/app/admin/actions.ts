@@ -593,6 +593,105 @@ export async function updateOrderDetails(fd: FormData) {
 }
 
 /* ------------------------------------------------------------------ */
+/* commission tracker                                                 */
+/* ------------------------------------------------------------------ */
+
+/** "YYYY-MM-DD" from a date input, or null. */
+const optDate = (fd: FormData, k: string) => {
+  const v = str(fd, k);
+  return /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null;
+};
+
+function parseCommissionJob(fd: FormData) {
+  const errors: string[] = [];
+  const clientName = str(fd, "clientName");
+  const title = str(fd, "title");
+  if (!clientName) errors.push("Enter the client's name.");
+  if (!title) errors.push("Say what the commission is.");
+  const price = optInt(fd, "price");
+  if (Number.isNaN(price) || (price !== null && price < 0)) errors.push("Price must be a whole number of shillings.");
+  const status = z.enum(schema.commissionJobStatus.enumValues).safeParse(str(fd, "status"));
+  return {
+    errors,
+    values: {
+      clientName: clientName.slice(0, 160),
+      clientContact: str(fd, "clientContact").slice(0, 200),
+      title: title.slice(0, 200),
+      details: str(fd, "details").slice(0, 8000),
+      size: str(fd, "size").slice(0, 120),
+      price: price as number | null,
+      status: status.success ? status.data : ("agreed" as const),
+      agreedOn: optDate(fd, "agreedOn"),
+      dueOn: optDate(fd, "dueOn"),
+      deliveredOn: optDate(fd, "deliveredOn"),
+      notes: str(fd, "notes").slice(0, 8000),
+    },
+  };
+}
+
+/** Records the first payment straight from the add/edit form when an amount is entered. */
+async function insertCommissionPayment(jobId: string, fd: FormData) {
+  const amount = optInt(fd, "paymentAmount");
+  if (amount === null) return null;
+  if (Number.isNaN(amount) || amount <= 0) return "Payment amount must be a whole number above zero.";
+  await db.insert(schema.commissionPayments).values({
+    jobId,
+    amount,
+    paidOn: optDate(fd, "paymentDate") ?? new Date().toISOString().slice(0, 10),
+    method: str(fd, "paymentMethod").slice(0, 60),
+    note: str(fd, "paymentNote").slice(0, 300),
+  });
+  return null;
+}
+
+export async function createCommissionJob(fd: FormData) {
+  await requireAdmin();
+  const { errors, values } = parseCommissionJob(fd);
+  if (errors.length) back("/admin/commission-tracker", "error", errors.join(" "));
+  const [row] = await db.insert(schema.commissionJobs).values(values).returning({ id: schema.commissionJobs.id });
+  const payError = await insertCommissionPayment(row.id, fd);
+  if (payError) back(`/admin/commission-tracker/${row.id}`, "error", `Commission saved, but the payment was not: ${payError}`);
+  back("/admin/commission-tracker", "ok", `Added the commission for ${values.clientName}.`);
+}
+
+export async function updateCommissionJob(fd: FormData) {
+  const admin = await requireAdmin();
+  const id = str(fd, "id");
+  const path = `/admin/commission-tracker/${id}`;
+  const { errors, values } = parseCommissionJob(fd);
+  if (errors.length) back(path, "error", errors.join(" "));
+  await db.update(schema.commissionJobs).set({ ...values, updatedAt: new Date() }).where(eq(schema.commissionJobs.id, id));
+  console.info(`[admin] ${admin.email} updated commission job ${id}`);
+  back(path, "ok", "Saved.");
+}
+
+export async function addCommissionPayment(fd: FormData) {
+  await requireAdmin();
+  const id = str(fd, "jobId");
+  const path = `/admin/commission-tracker/${id}`;
+  if (optInt(fd, "paymentAmount") === null) back(path, "error", "Enter the amount received.");
+  const payError = await insertCommissionPayment(id, fd);
+  if (payError) back(path, "error", payError);
+  back(path, "ok", "Payment recorded.");
+}
+
+export async function deleteCommissionPayment(fd: FormData) {
+  await requireAdmin();
+  const id = str(fd, "jobId");
+  await db
+    .delete(schema.commissionPayments)
+    .where(and(eq(schema.commissionPayments.id, str(fd, "paymentId")), eq(schema.commissionPayments.jobId, id)));
+  back(`/admin/commission-tracker/${id}`, "ok", "Payment removed.");
+}
+
+export async function deleteCommissionJob(fd: FormData) {
+  await requireAdmin();
+  const [job] = await db.delete(schema.commissionJobs).where(eq(schema.commissionJobs.id, str(fd, "id"))).returning();
+  if (!job) back("/admin/commission-tracker", "error", "Commission not found.");
+  back("/admin/commission-tracker", "ok", `Deleted the commission for ${job.clientName} and its payments.`);
+}
+
+/* ------------------------------------------------------------------ */
 /* collectors, messages                                               */
 /* ------------------------------------------------------------------ */
 

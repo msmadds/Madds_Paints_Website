@@ -92,6 +92,11 @@ const PILL: Record<string, string> = {
   available: "bg-[#d7e6de] text-[#24493c]",
   reserved: "bg-[#f3e2b8] text-[#5c4410]",
   sold: "bg-[#f1d6d3] text-reddot",
+  enquiry: "bg-plinth text-graphite",
+  agreed: "bg-[#f3e2b8] text-[#5c4410]",
+  in_progress: "bg-[#f3e2b8] text-[#5c4410]",
+  ready: "bg-[#d7e6de] text-[#24493c]",
+  delivered: "bg-graphite text-wall",
 };
 
 export function Pill({ value, children }: { value: string; children: React.ReactNode }) {
