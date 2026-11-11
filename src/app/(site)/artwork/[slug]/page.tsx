@@ -8,6 +8,7 @@ import { PROMOTION, promotionActive, salePrice } from "@/lib/promotion";
 import { ArtworkGallery } from "@/components/shop/artwork-gallery";
 import { PurchaseOriginal } from "@/components/shop/purchase-original";
 import { StatusMark } from "@/components/site/status-mark";
+import { ShareArtwork } from "@/components/site/share-artwork";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -19,7 +20,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: `${a.title}, original painting`,
     description: `${a.title} (${a.year ?? ""}), ${a.medium}. ${a.description.slice(0, 140)}`,
-    openGraph: img ? { images: [{ url: img.url }] } : undefined,
+    openGraph: img ? { images: [{ url: img.url, alt: a.title }] } : undefined,
   };
 }
 
@@ -34,6 +35,7 @@ export default async function ArtworkPage({ params }: Props) {
   const hasPrints = Boolean(a.printProduct?.published && a.printProduct.variants.length);
   const fromPrice = hasPrints ? printFromPrice(a) : null;
   const forSale = a.price !== null;
+  const site = (process.env.NEXT_PUBLIC_SITE_URL || "").replace(/\/$/, "");
 
   return (
     <div className="mx-auto max-w-[88rem] px-5 pt-6 pb-28 md:px-10 md:pt-12 lg:pb-0">
@@ -121,6 +123,14 @@ export default async function ArtworkPage({ params }: Props) {
             <div className="mt-8 lg:hidden">
               {!purchasable && <UnavailableNote status={a.status} forSale={forSale} hasPrints={hasPrints} slug={a.slug} />}
             </div>
+
+            <ShareArtwork
+              title={a.title}
+              artist={a.artistName}
+              pageUrl={`${site}/artwork/${a.slug}`}
+              imageUrl={primaryImage(a)?.url ?? null}
+              slug={a.slug}
+            />
 
             {a.description && (
               <div className="prose-gallery mt-10 border-t border-rule pt-8">
