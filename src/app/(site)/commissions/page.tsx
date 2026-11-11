@@ -9,8 +9,8 @@ import { bookedThisMonth, currentMonthName } from "@/lib/commissions";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
-  title: "Commissions",
-  description: "Commission an original painting from MedePaints, made for your space.",
+  title: "Commission a painting in Dar es Salaam",
+  description: "Commission an original painting from MedePaints, a painter in Dar es Salaam, Tanzania, made for your home or office.",
 };
 
 export default async function CommissionsPage() {

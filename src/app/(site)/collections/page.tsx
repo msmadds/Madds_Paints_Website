@@ -5,7 +5,7 @@ import { ArtImage } from "@/components/site/art-image";
 
 export const metadata: Metadata = {
   title: "Collections",
-  description: "MedePaints paintings grouped into collections and series.",
+  description: "MedePaints paintings from Dar es Salaam, Tanzania, grouped into collections and series.",
 };
 
 export default async function CollectionsPage() {

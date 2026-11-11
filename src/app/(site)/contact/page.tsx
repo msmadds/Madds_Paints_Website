@@ -3,7 +3,7 @@ import { getSettings } from "@/lib/settings";
 import { whatsappLink } from "@/lib/utils";
 import { ContactForm } from "./contact-form";
 
-export const metadata: Metadata = { title: "Contact" };
+export const metadata: Metadata = { title: "Contact", description: "Contact MedePaints, a painting studio in Dar es Salaam, Tanzania." };
 
 export default async function ContactPage() {
   const s = await getSettings();

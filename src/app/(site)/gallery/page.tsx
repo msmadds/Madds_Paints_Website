@@ -6,8 +6,8 @@ import { StatusMark } from "@/components/site/status-mark";
 import { FilterLinks } from "@/components/shop/shop-tabs";
 
 export const metadata: Metadata = {
-  title: "Gallery",
-  description: "The MedePaints body of work: available, reserved and sold paintings.",
+  title: "Gallery of paintings by a Dar es Salaam artist",
+  description: "The MedePaints body of work: original paintings made in Dar es Salaam, Tanzania, available, reserved and sold.",
 };
 
 export default async function GalleryPage({ searchParams }: { searchParams: Promise<{ show?: string }> }) {

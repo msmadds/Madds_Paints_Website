@@ -10,6 +10,7 @@ import { WhatsAppChannel } from "@/components/site/whatsapp-channel";
 import { PROMOTION, promotionActive } from "@/lib/promotion";
 import { formatMoney } from "@/lib/format";
 import { GIFT_CARD_AMOUNTS } from "@/lib/gift-card-rules";
+import { StructuredData } from "@/components/site/structured-data";
 
 export default async function HomePage() {
   const settings = await getSettings();
@@ -17,9 +18,25 @@ export default async function HomePage() {
   const hero = (settings.heroArtworkSlug && (await getArtworkBySlug(settings.heroArtworkSlug))) || featured[0] || null;
   const works = featured.filter((w) => w.id !== hero?.id).slice(0, 4);
   const paragraphs = settings.aboutShort.split(/\n+/).filter(Boolean);
+  const site = (process.env.NEXT_PUBLIC_SITE_URL || "").replace(/\/$/, "");
+  const [city, country] = settings.location.split(",").map((s) => s.trim());
+  const heroImage = hero ? primaryImage(hero) : null;
 
   return (
     <>
+      <StructuredData
+        data={{
+          "@context": "https://schema.org",
+          "@type": "ArtGallery",
+          name: settings.businessName,
+          url: site,
+          description: `Original paintings and fine art prints by a painter in ${settings.location}.`,
+          ...(heroImage && { image: heroImage.url }),
+          address: { "@type": "PostalAddress", addressLocality: city, ...(country && { addressCountry: country }) },
+          areaServed: settings.location,
+          sameAs: [settings.instagramUrl, settings.whatsappChannelUrl].filter(Boolean),
+        }}
+      />
       {/* Hero: one work, hung on the wall, with its label */}
       <section className="mx-auto max-w-[88rem] px-5 pt-8 pb-20 md:px-10 md:pt-14 md:pb-28">
         <div className="grid gap-10 lg:grid-cols-12 lg:gap-14">

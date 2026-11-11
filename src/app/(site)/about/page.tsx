@@ -4,7 +4,7 @@ import { getSettings } from "@/lib/settings";
 import { listFeatured, primaryImage } from "@/lib/catalog";
 import { ArtImage } from "@/components/site/art-image";
 
-export const metadata: Metadata = { title: "About", description: "About MedePaints and the artist." };
+export const metadata: Metadata = { title: "About the artist", description: "About MedePaints and Mede, a painter based in Dar es Salaam, Tanzania." };
 
 function Paras({ text }: { text: string }) {
   return (

@@ -6,7 +6,10 @@ import { WallLabel } from "@/components/site/wall-label";
 import { SoldDot } from "@/components/site/status-mark";
 import { FilterLinks, ShopTabs } from "@/components/shop/shop-tabs";
 
-export const metadata: Metadata = { title: "Original paintings" };
+export const metadata: Metadata = {
+  title: "Original paintings for sale in Tanzania",
+  description: "Buy original paintings from a Dar es Salaam studio. Each is one of one, signed, with a Certificate of Authenticity.",
+};
 
 export default async function OriginalsPage({ searchParams }: { searchParams: Promise<{ show?: string }> }) {
   const { show = "all" } = await searchParams;

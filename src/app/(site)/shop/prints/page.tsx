@@ -5,7 +5,10 @@ import { ArtImage } from "@/components/site/art-image";
 import { WallLabel } from "@/components/site/wall-label";
 import { ShopTabs } from "@/components/shop/shop-tabs";
 
-export const metadata: Metadata = { title: "Fine art prints" };
+export const metadata: Metadata = {
+  title: "Fine art prints",
+  description: "Fine art prints of MedePaints paintings on 300 GSM paper, from a painter in Dar es Salaam, Tanzania.",
+};
 
 export default async function PrintsPage() {
   const works = await listPrints();

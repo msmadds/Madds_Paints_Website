@@ -9,6 +9,7 @@ import { ArtworkGallery } from "@/components/shop/artwork-gallery";
 import { PurchaseOriginal } from "@/components/shop/purchase-original";
 import { StatusMark } from "@/components/site/status-mark";
 import { ShareArtwork } from "@/components/site/share-artwork";
+import { StructuredData } from "@/components/site/structured-data";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -19,7 +20,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const img = primaryImage(a);
   return {
     title: `${a.title}, original painting`,
-    description: `${a.title} (${a.year ?? ""}), ${a.medium}. ${a.description.slice(0, 140)}`,
+    description: [`${a.title}, an original painting by ${a.artistName}, Dar es Salaam`, a.medium, a.description.slice(0, 140)].filter(Boolean).join(". "),
     openGraph: img ? { images: [{ url: img.url, alt: a.title }] } : undefined,
   };
 }
@@ -39,6 +40,30 @@ export default async function ArtworkPage({ params }: Props) {
 
   return (
     <div className="mx-auto max-w-[88rem] px-5 pt-6 pb-28 md:px-10 md:pt-12 lg:pb-0">
+      <StructuredData
+        data={{
+          "@context": "https://schema.org",
+          "@type": ["Product", "VisualArtwork"],
+          name: a.title,
+          description: a.description || `Original painting by ${a.artistName}`,
+          image: a.images.map((i) => i.url),
+          url: `${site}/artwork/${a.slug}`,
+          brand: { "@type": "Brand", name: a.artistName },
+          creator: { "@type": "Person", name: a.artistName },
+          artform: "Painting",
+          ...(a.medium && { artMedium: a.medium }),
+          ...(a.year && { dateCreated: String(a.year) }),
+          ...(forSale && {
+            offers: {
+              "@type": "Offer",
+              price: a.price,
+              priceCurrency: a.currency,
+              availability: a.status === "available" ? "https://schema.org/InStock" : a.status === "sold" ? "https://schema.org/SoldOut" : "https://schema.org/LimitedAvailability",
+              url: `${site}/artwork/${a.slug}`,
+            },
+          }),
+        }}
+      />
       <nav aria-label="Breadcrumb" className="mb-6 text-[0.875rem] text-stone">
         <Link href="/shop/originals" className="hover:text-graphite">
           Originals
