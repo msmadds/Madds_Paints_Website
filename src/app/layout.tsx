@@ -8,6 +8,8 @@ export const metadata: Metadata = {
   title: { default: "MedePaints — Original paintings and fine art prints", template: "%s — MedePaints" },
   description: "Original paintings for collectors. Fine art prints for everyone. From a painter's studio in Dar es Salaam, Tanzania.",
   openGraph: { type: "website", siteName: "MedePaints" },
+  // Proves ownership of medepaints.com in Google Search Console.
+  verification: { google: "GyVMIdKGhF8ZrBHtYJg7w96oqND_n8n4xSfwUM_iAZc" },
 };
 
 export const viewport: Viewport = {
