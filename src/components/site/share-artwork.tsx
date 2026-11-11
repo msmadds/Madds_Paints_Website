@@ -17,6 +17,7 @@ export function ShareArtwork({ title, artist, pageUrl, imageUrl, slug }: Props) 
     let cancelled = false;
     fetch(`/_next/image?url=${encodeURIComponent(imageUrl)}&w=1080&q=90`)
       .then((r) => (r.ok ? r.blob() : Promise.reject()))
+      .then((raw) => withLabel(raw, title, artist, new URL(pageUrl, location.href).host.replace(/^www\./, "")).catch(() => raw))
       .then((blob) => {
         if (cancelled) return;
         const ext = blob.type === "image/png" ? "png" : blob.type === "image/webp" ? "webp" : "jpg";
@@ -28,7 +29,7 @@ export function ShareArtwork({ title, artist, pageUrl, imageUrl, slug }: Props) 
     return () => {
       cancelled = true;
     };
-  }, [imageUrl, slug]);
+  }, [imageUrl, slug, title, artist, pageUrl]);
 
   async function shareImage() {
     if (!file) return;
@@ -103,4 +104,41 @@ export function ShareArtwork({ title, artist, pageUrl, imageUrl, slug }: Props) 
       </div>
     </div>
   );
+}
+
+/** Adds a white wall-label strip under the painting: title and artist on the left, the website on the right. */
+async function withLabel(raw: Blob, title: string, artist: string, site: string): Promise<Blob> {
+  const img = await createImageBitmap(raw);
+  await document.fonts.ready;
+  const w = img.width;
+  const band = Math.max(72, Math.round(w * 0.1));
+  const pad = Math.round(band * 0.32);
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = img.height + band;
+  const ctx = canvas.getContext("2d")!;
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(img, 0, 0);
+
+  const sans = '"Hanken Grotesk Variable", "Helvetica Neue", Arial, sans-serif';
+  const display = '"Bodoni Moda Variable", "Bodoni 72", Didot, Georgia, serif';
+  const mid = img.height + band / 2;
+
+  ctx.textBaseline = "middle";
+  ctx.textAlign = "right";
+  ctx.fillStyle = "#2a2926";
+  ctx.font = `600 ${Math.round(band * 0.2)}px ${sans}`;
+  ctx.fillText(site, w - pad, mid);
+  const siteWidth = ctx.measureText(site).width;
+
+  ctx.textAlign = "left";
+  const maxLeft = w - pad * 3 - siteWidth;
+  ctx.font = `italic ${Math.round(band * 0.26)}px ${display}`;
+  ctx.fillText(title, pad, mid - band * 0.15, maxLeft);
+  ctx.fillStyle = "#6f6a62";
+  ctx.font = `${Math.round(band * 0.18)}px ${sans}`;
+  ctx.fillText(artist, pad, mid + band * 0.2, maxLeft);
+
+  return new Promise((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject()), "image/jpeg", 0.9));
 }
