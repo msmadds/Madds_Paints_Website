@@ -94,6 +94,8 @@ export const artworks = pgTable(
     holdExpiresAt: timestamp("hold_expires_at", { withTimezone: true }),
     soldAt: timestamp("sold_at", { withTimezone: true }),
     soldOrderId: uuid("sold_order_id"),
+    /** Does the original come framed? Null = not stated (nothing shown publicly). */
+    framed: boolean("framed"),
     coaIncluded: boolean("coa_included").notNull().default(true),
     coaNumber: varchar("coa_number", { length: 80 }),
     featured: boolean("featured").notNull().default(false),

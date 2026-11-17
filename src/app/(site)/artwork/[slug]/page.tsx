@@ -108,6 +108,12 @@ export default async function ArtworkPage({ params }: Props) {
                   <dd>{a.year}</dd>
                 </>
               )}
+              {a.framed != null && (
+                <>
+                  <dt className="text-stone">Frame</dt>
+                  <dd>{a.framed ? "Comes framed" : "Not framed"}</dd>
+                </>
+              )}
               <dt className="text-stone">Availability</dt>
               <dd>
                 <StatusMark status={a.status} forSale={forSale} showAvailable />

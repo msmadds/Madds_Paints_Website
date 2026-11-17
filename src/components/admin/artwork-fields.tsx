@@ -25,6 +25,17 @@ export function ArtworkFields({ a }: { a?: Artwork }) {
         <option value="reserved">Reserved</option>
         <option value="sold">Sold</option>
       </Select>
+      <Select
+        label="Frame"
+        name="framed"
+        defaultValue={a?.framed == null ? "" : a.framed ? "yes" : "no"}
+        className="md:col-span-3"
+        hint="Shown on the painting's page."
+      >
+        <option value="">Not stated</option>
+        <option value="yes">Comes framed</option>
+        <option value="no">Not framed</option>
+      </Select>
       <Textarea label="Description" name="description" defaultValue={a?.description} rows={6} className="md:col-span-6" />
       <div className="grid gap-4 md:col-span-3">
         <Checkbox label="Certificate of Authenticity included" name="coaIncluded" defaultChecked={a?.coaIncluded ?? true} />

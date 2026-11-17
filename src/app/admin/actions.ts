@@ -100,6 +100,7 @@ function parseArtwork(fd: FormData) {
       depthCm: depthCm as string | null,
       year: year as number | null,
       price: price as number | null,
+      framed: str(fd, "framed") === "yes" ? true : str(fd, "framed") === "no" ? false : null,
       coaIncluded: bool(fd, "coaIncluded"),
       coaNumber,
       featured: bool(fd, "featured"),
