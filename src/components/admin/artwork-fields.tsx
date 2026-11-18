@@ -1,7 +1,7 @@
 import type { Artwork } from "@/db/schema";
 import { Checkbox, Input, Select, Textarea } from "./ui";
 
-export function ArtworkFields({ a }: { a?: Artwork }) {
+export function ArtworkFields({ a, nextCertificate }: { a?: Artwork; nextCertificate?: string }) {
   return (
     <div className="grid gap-5 md:grid-cols-6">
       <Input label="Title" name="title" defaultValue={a?.title} required className="md:col-span-4" />
@@ -43,7 +43,13 @@ export function ArtworkFields({ a }: { a?: Artwork }) {
         <Checkbox label="Published" hint="Untick to hide from the website without deleting." name="published" defaultChecked={a?.published ?? true} />
       </div>
       <div className="grid gap-5 md:col-span-3">
-        <Input label="Certificate number" name="coaNumber" defaultValue={a?.coaNumber ?? ""} placeholder="MP-COA-2026-001" hint="Kept on the record and on the order. Not shown publicly." />
+        <Input
+          label="Certificate number"
+          name="coaNumber"
+          defaultValue={a?.coaNumber ?? ""}
+          placeholder={nextCertificate ?? "MH-2026-001"}
+          hint={`${nextCertificate && !a?.coaNumber ? `Next free number: ${nextCertificate}. ` : ""}All numbers are listed under Certificates. Not shown publicly.`}
+        />
         <div className="grid grid-cols-2 gap-4">
           <Input label="URL slug" name="slug" defaultValue={a?.slug ?? ""} hint="Leave empty to use the title." />
           <Input label="Sort order" name="sortOrder" inputMode="numeric" defaultValue={a?.sortOrder ?? 0} hint="Lower shows first." />

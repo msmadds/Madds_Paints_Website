@@ -6,6 +6,7 @@ import { db, schema } from "@/db";
 import { formatDate, formatMoney } from "@/lib/format";
 import { blobConfigured } from "@/lib/storage";
 import { ArtworkFields } from "@/components/admin/artwork-fields";
+import { certificateRegister } from "@/lib/certificates";
 import { SubmitButton } from "@/components/admin/buttons";
 import { ImageUploader } from "@/components/admin/image-uploader";
 import { Checkbox, Flash, Input, PageTitle, Panel, Select, Textarea } from "@/components/admin/ui";
@@ -81,7 +82,7 @@ export default async function EditArtwork({ params, searchParams }: Props) {
         <form action={updateArtwork}>
           <input type="hidden" name="id" value={a.id} />
           <Panel title="Original painting">
-            <ArtworkFields a={a} />
+            <ArtworkFields a={a} nextCertificate={(await certificateRegister()).next} />
             <div className="mt-6"><SubmitButton>Save artwork</SubmitButton></div>
           </Panel>
         </form>

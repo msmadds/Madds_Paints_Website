@@ -86,7 +86,7 @@ function parseArtwork(fd: FormData) {
   const depthCm = optDec(fd, "depthCm");
   if ([widthCm, heightCm, depthCm].includes("bad")) errors.push("Dimensions must be numbers in centimetres.");
   const sortOrder = optInt(fd, "sortOrder") ?? 0;
-  const coaNumber = str(fd, "coaNumber") || null;
+  const coaNumber = str(fd, "coaNumber").toUpperCase() || null;
   return {
     errors,
     values: {
