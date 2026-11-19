@@ -9,6 +9,7 @@ import { ArtworkGallery } from "@/components/shop/artwork-gallery";
 import { PurchaseOriginal } from "@/components/shop/purchase-original";
 import { StatusMark } from "@/components/site/status-mark";
 import { ShareArtwork } from "@/components/site/share-artwork";
+import { AskOnWhatsApp } from "@/components/site/ask-on-whatsapp";
 import { StructuredData } from "@/components/site/structured-data";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -37,6 +38,9 @@ export default async function ArtworkPage({ params }: Props) {
   const fromPrice = hasPrints ? printFromPrice(a) : null;
   const forSale = a.price !== null;
   const site = (process.env.NEXT_PUBLIC_SITE_URL || "").replace(/\/$/, "");
+  const askOnWhatsApp = forSale && a.status !== "sold" && (
+    <AskOnWhatsApp phone={settings.whatsapp} title={a.title} pageUrl={`${site}/artwork/${a.slug}`} />
+  );
 
   return (
     <div className="mx-auto max-w-[88rem] px-5 pt-6 pb-28 md:px-10 md:pt-12 lg:pb-0">
@@ -150,9 +154,11 @@ export default async function ArtworkPage({ params }: Props) {
               ) : (
                 <UnavailableNote status={a.status} forSale={forSale} hasPrints={hasPrints} slug={a.slug} />
               )}
+              {askOnWhatsApp}
             </div>
             <div className="mt-8 lg:hidden">
               {!purchasable && <UnavailableNote status={a.status} forSale={forSale} hasPrints={hasPrints} slug={a.slug} />}
+              {askOnWhatsApp}
             </div>
 
             <ShareArtwork
