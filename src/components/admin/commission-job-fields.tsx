@@ -3,7 +3,7 @@ import { COMMISSION_JOB_STATUS_LABELS } from "@/lib/format";
 import { Input, Select, Textarea } from "./ui";
 import { ClientContactFields, type ContactSuggestion } from "./client-contact-fields";
 
-export function CommissionJobFields({ job, suggestions }: { job?: CommissionJob; suggestions: ContactSuggestion[] }) {
+export function CommissionJobFields({ job, suggestions, nextCertificate }: { job?: CommissionJob; suggestions: ContactSuggestion[]; nextCertificate?: string }) {
   return (
     <div className="grid gap-5 md:grid-cols-6">
       <ClientContactFields name={job?.clientName} contact={job?.clientContact} suggestions={suggestions} />
@@ -22,6 +22,14 @@ export function CommissionJobFields({ job, suggestions }: { job?: CommissionJob;
           <option key={v} value={v}>{l}</option>
         ))}
       </Select>
+      <Input
+        label="Certificate number"
+        name="coaNumber"
+        defaultValue={job?.coaNumber ?? ""}
+        placeholder={nextCertificate}
+        hint={nextCertificate && !job?.coaNumber ? `Next free: ${nextCertificate}` : "Listed under Certificates."}
+        className="md:col-span-2"
+      />
       <Input label="Agreed on" name="agreedOn" type="date" defaultValue={job?.agreedOn ?? ""} className="md:col-span-2" />
       <Input label="Due by" name="dueOn" type="date" defaultValue={job?.dueOn ?? ""} className="md:col-span-2" />
       <Input label="Delivered on" name="deliveredOn" type="date" defaultValue={job?.deliveredOn ?? ""} className="md:col-span-2" />

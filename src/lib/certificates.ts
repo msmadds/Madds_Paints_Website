@@ -1,5 +1,5 @@
 import "server-only";
-import { asc } from "drizzle-orm";
+import { and, asc, eq, ne } from "drizzle-orm";
 import { db, schema } from "@/db";
 
 /** Certificate numbers look like MH-2026-010: prefix, year, then a three-digit count that restarts each year. */
@@ -30,17 +30,49 @@ export function nextCertificate(numbers: (string | null)[], year = certificateYe
   };
 }
 
-/** Every artwork with its certificate details, published or not. */
+export type CertificateEntry = { number: string; kind: "artwork" | "commission"; id: string; title: string; detail: string; hidden: boolean; status: string };
+
+/** Every certificate number on artworks and commissions, plus artworks still waiting for one. */
 export async function certificateRegister() {
-  const rows = await db.query.artworks.findMany({
-    columns: { id: true, title: true, year: true, status: true, published: true, coaIncluded: true, coaNumber: true },
-    orderBy: [asc(schema.artworks.title)],
-  });
-  const numbered = rows
-    .filter((r) => r.coaNumber)
-    .sort((a, b) => a.coaNumber!.localeCompare(b.coaNumber!, "en", { numeric: true }));
-  const needsNumber = rows.filter((r) => r.coaIncluded && !r.coaNumber);
-  return { numbered, needsNumber, ...nextCertificate(rows.map((r) => r.coaNumber)) };
+  const [works, jobs] = await Promise.all([
+    db.query.artworks.findMany({
+      columns: { id: true, title: true, year: true, status: true, published: true, coaIncluded: true, coaNumber: true },
+      orderBy: [asc(schema.artworks.title)],
+    }),
+    db.query.commissionJobs.findMany({
+      columns: { id: true, title: true, clientName: true, status: true, coaNumber: true },
+    }),
+  ]);
+  const numbered: CertificateEntry[] = [
+    ...works.filter((r) => r.coaNumber).map((r) => ({
+      number: r.coaNumber!, kind: "artwork" as const, id: r.id, title: r.title,
+      detail: r.year ? String(r.year) : "", hidden: !r.published, status: r.status,
+    })),
+    ...jobs.filter((r) => r.coaNumber).map((r) => ({
+      number: r.coaNumber!, kind: "commission" as const, id: r.id, title: r.title,
+      detail: `Commission for ${r.clientName}`, hidden: false, status: r.status,
+    })),
+  ].sort((a, b) => a.number.localeCompare(b.number, "en", { numeric: true }));
+  const needsNumber = works.filter((r) => r.coaIncluded && !r.coaNumber);
+  return { numbered, needsNumber, ...nextCertificate(numbered.map((r) => r.number)) };
+}
+
+/** Where a certificate number is already used, ignoring the record being saved. Null when free. */
+export async function certificateTakenBy(number: string | null, except: { artworkId?: string; jobId?: string }) {
+  if (!number) return null;
+  const [work, job] = await Promise.all([
+    db.query.artworks.findFirst({
+      columns: { title: true },
+      where: except.artworkId ? and(eq(schema.artworks.coaNumber, number), ne(schema.artworks.id, except.artworkId)) : eq(schema.artworks.coaNumber, number),
+    }),
+    db.query.commissionJobs.findFirst({
+      columns: { title: true, clientName: true },
+      where: except.jobId ? and(eq(schema.commissionJobs.coaNumber, number), ne(schema.commissionJobs.id, except.jobId)) : eq(schema.commissionJobs.coaNumber, number),
+    }),
+  ]);
+  if (work) return `the painting "${work.title}"`;
+  if (job) return `the commission "${job.title}" for ${job.clientName}`;
+  return null;
 }
 
 export function isStandardCertificate(num: string): boolean {

@@ -43,6 +43,13 @@
       "when": 1794904350863,
       "tag": "0005_artwork_framed",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1795074904840,
+      "tag": "0006_commission_coa_number",
+      "breakpoints": true
     }
   ]
 }

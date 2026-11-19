@@ -3,6 +3,7 @@ import { desc } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { COMMISSION_JOB_STATUS_LABELS, formatDate, formatMoney } from "@/lib/format";
 import { balanceDue, contactSuggestions, isOpen, isOverdue, paidSoFar, todayKey, type JobWithPayments } from "@/lib/commission-tracker";
+import { certificateRegister } from "@/lib/certificates";
 import { SubmitButton } from "@/components/admin/buttons";
 import { CommissionJobFields, CommissionPaymentFields } from "@/components/admin/commission-job-fields";
 import { Flash, PageTitle, Panel, Pill } from "@/components/admin/ui";
@@ -132,7 +133,7 @@ export default async function CommissionTracker({ searchParams }: { searchParams
 
       <form action={createCommissionJob} id="new" className="mt-10 scroll-mt-6">
         <Panel title="Add a commission" description="Only the client's name and what the commission is are required. You can fill in the rest later. After saving, the commission opens so you can upload draft images.">
-          <CommissionJobFields suggestions={suggestions} />
+          <CommissionJobFields suggestions={suggestions} nextCertificate={(await certificateRegister()).next} />
           <div className="mt-6 border-t border-rule pt-6">
             <CommissionPaymentFields optional />
           </div>

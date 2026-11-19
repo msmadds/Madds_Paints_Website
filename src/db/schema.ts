@@ -441,10 +441,12 @@ export const commissionJobs = pgTable(
     agreedOn: date("agreed_on"),
     dueOn: date("due_on"),
     deliveredOn: date("delivered_on"),
+    /** Certificate of Authenticity number, same series as artworks (MH-2026-010). */
+    coaNumber: varchar("coa_number", { length: 80 }),
     notes: text("notes").notNull().default(""),
     ...timestamps,
   },
-  (t) => [index("commission_jobs_status_idx").on(t.status)],
+  (t) => [index("commission_jobs_status_idx").on(t.status), uniqueIndex("commission_jobs_coa_number_idx").on(t.coaNumber)],
 );
 
 /** Money received for a commission (deposit, balance, …). */

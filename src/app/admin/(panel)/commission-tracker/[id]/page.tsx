@@ -6,6 +6,7 @@ import { db, schema } from "@/db";
 import { COMMISSION_JOB_STATUS_LABELS, formatDate, formatMoney } from "@/lib/format";
 import { balanceDue, contactSuggestions, isOverdue, paidSoFar } from "@/lib/commission-tracker";
 import { blobConfigured } from "@/lib/storage";
+import { certificateRegister } from "@/lib/certificates";
 import { SubmitButton } from "@/components/admin/buttons";
 import { ImageUploader } from "@/components/admin/image-uploader";
 import { CommissionJobFields, CommissionPaymentFields } from "@/components/admin/commission-job-fields";
@@ -125,7 +126,7 @@ export default async function CommissionJobPage({ params, searchParams }: Props)
         <form action={updateCommissionJob}>
           <input type="hidden" name="id" value={job.id} />
           <Panel title="Details">
-            <CommissionJobFields job={job} suggestions={suggestions} />
+            <CommissionJobFields job={job} suggestions={suggestions} nextCertificate={(await certificateRegister()).next} />
             <div className="mt-6"><SubmitButton>Save</SubmitButton></div>
           </Panel>
         </form>

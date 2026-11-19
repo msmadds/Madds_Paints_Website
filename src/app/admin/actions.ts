@@ -7,6 +7,7 @@ import { and, eq, inArray, notInArray } from "drizzle-orm";
 import { z } from "zod";
 import { db, schema } from "@/db";
 import { login, logout, requireAdmin } from "@/lib/auth";
+import { certificateTakenBy } from "@/lib/certificates";
 import { slugify } from "@/lib/format";
 import { saveSettings, settingsSchema, getSettings } from "@/lib/settings";
 import { deleteImage } from "@/lib/storage";
@@ -114,6 +115,8 @@ export async function createArtwork(fd: FormData) {
   await requireAdmin();
   const { errors, values } = parseArtwork(fd);
   if (errors.length) back("/admin/artworks/new", "error", errors.join(" "));
+  const takenBy = await certificateTakenBy(values.coaNumber, {});
+  if (takenBy) back("/admin/artworks/new", "error", `Certificate ${values.coaNumber} is already used by ${takenBy}.`);
   let id: string;
   try {
     const [row] = await db.insert(schema.artworks).values(values).returning({ id: schema.artworks.id });
@@ -135,6 +138,8 @@ export async function updateArtwork(fd: FormData) {
 
   const current = await db.query.artworks.findFirst({ where: eq(schema.artworks.id, id) });
   if (!current) back("/admin/artworks", "error", "Artwork not found.");
+  const takenBy = await certificateTakenBy(values.coaNumber, { artworkId: id });
+  if (takenBy) back(path, "error", `Certificate ${values.coaNumber} is already used by ${takenBy}.`);
 
   const requested = z.enum(["available", "reserved", "sold"]).safeParse(str(fd, "status"));
   const statusPatch: Partial<typeof schema.artworks.$inferInsert> = {};
@@ -625,6 +630,7 @@ function parseCommissionJob(fd: FormData) {
       agreedOn: optDate(fd, "agreedOn"),
       dueOn: optDate(fd, "dueOn"),
       deliveredOn: optDate(fd, "deliveredOn"),
+      coaNumber: str(fd, "coaNumber").toUpperCase().slice(0, 80) || null,
       notes: str(fd, "notes").slice(0, 8000),
     },
   };
@@ -649,7 +655,15 @@ export async function createCommissionJob(fd: FormData) {
   await requireAdmin();
   const { errors, values } = parseCommissionJob(fd);
   if (errors.length) back("/admin/commission-tracker", "error", errors.join(" "));
-  const [row] = await db.insert(schema.commissionJobs).values(values).returning({ id: schema.commissionJobs.id });
+  const takenBy = await certificateTakenBy(values.coaNumber, {});
+  if (takenBy) back("/admin/commission-tracker", "error", `Certificate ${values.coaNumber} is already used by ${takenBy}.`);
+  let row: { id: string };
+  try {
+    [row] = await db.insert(schema.commissionJobs).values(values).returning({ id: schema.commissionJobs.id });
+  } catch (err) {
+    if (isUniqueViolation(err)) back("/admin/commission-tracker", "error", "That certificate number is already used.");
+    throw err;
+  }
   const payError = await insertCommissionPayment(row.id, fd);
   if (payError) back(`/admin/commission-tracker/${row.id}`, "error", `Commission saved, but the payment was not: ${payError}`);
   // Straight to the new commission so draft images can be added (they need the saved commission).
@@ -664,7 +678,14 @@ export async function updateCommissionJob(fd: FormData) {
   const path = `/admin/commission-tracker/${id}`;
   const { errors, values } = parseCommissionJob(fd);
   if (errors.length) back(path, "error", errors.join(" "));
-  await db.update(schema.commissionJobs).set({ ...values, updatedAt: new Date() }).where(eq(schema.commissionJobs.id, id));
+  const takenBy = await certificateTakenBy(values.coaNumber, { jobId: id });
+  if (takenBy) back(path, "error", `Certificate ${values.coaNumber} is already used by ${takenBy}.`);
+  try {
+    await db.update(schema.commissionJobs).set({ ...values, updatedAt: new Date() }).where(eq(schema.commissionJobs.id, id));
+  } catch (err) {
+    if (isUniqueViolation(err)) back(path, "error", "That certificate number is already used.");
+    throw err;
+  }
   console.info(`[admin] ${admin.email} updated commission job ${id}`);
   back(path, "ok", "Saved.");
 }

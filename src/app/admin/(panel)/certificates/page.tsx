@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { certificateRegister, isStandardCertificate } from "@/lib/certificates";
-import { ARTWORK_STATUS_LABELS } from "@/lib/format";
+import { ARTWORK_STATUS_LABELS, COMMISSION_JOB_STATUS_LABELS } from "@/lib/format";
 import { CopyButton } from "@/components/site/copy-button";
 import { PageTitle, Panel, Pill } from "@/components/admin/ui";
 
@@ -8,13 +8,14 @@ export const metadata = { title: "Certificates" };
 
 export default async function CertificatesAdmin() {
   const { numbered, needsNumber, next, highest, skipped } = await certificateRegister();
-  const odd = numbered.filter((r) => !isStandardCertificate(r.coaNumber!));
+  const odd = numbered.filter((r) => !isStandardCertificate(r.number));
 
   return (
     <div className="max-w-5xl">
       <PageTitle>Certificates</PageTitle>
       <p className="mb-6 max-w-2xl text-[0.9375rem] text-stone">
-        Every Certificate of Authenticity number in one place. Numbers follow the format MH-year-number, and the count starts
+        Every Certificate of Authenticity number in one place, for paintings on the website and commissions in the Commission
+        tracker. Numbers follow the format MH-year-number, and the count starts
         again at 001 each year. To give a painting its number, open it and type the number into Certificate number.
       </p>
 
@@ -28,8 +29,8 @@ export default async function CertificatesAdmin() {
         </p>
         {skipped.length > 0 && (
           <p className="mt-2 text-[0.875rem] text-stone">
-            Not recorded on any painting here: {skipped.join(", ")}. If any were given to a commission or a painting sold
-            outside the website, they are already taken.
+            Not recorded on any painting or commission here: {skipped.join(", ")}. If any were given out without being
+            recorded, they are already taken.
           </p>
         )}
       </Panel>
@@ -56,21 +57,29 @@ export default async function CertificatesAdmin() {
               <thead className="text-[0.8125rem] text-stone">
                 <tr className="border-b border-rule">
                   <th className="py-2 pr-4 font-semibold">Number</th>
-                  <th className="py-2 pr-4 font-semibold">Painting</th>
-                  <th className="py-2 pr-4 font-semibold">Year</th>
+                  <th className="py-2 pr-4 font-semibold">Painting or commission</th>
+                  <th className="py-2 pr-4 font-semibold">Details</th>
                   <th className="py-2 font-semibold">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-rule">
-                {numbered.map((a) => (
-                  <tr key={a.id}>
-                    <td className="py-2.5 pr-4 font-semibold whitespace-nowrap tabular-nums">{a.coaNumber}</td>
+                {numbered.map((c) => (
+                  <tr key={`${c.kind}-${c.id}`}>
+                    <td className="py-2.5 pr-4 font-semibold whitespace-nowrap tabular-nums">{c.number}</td>
                     <td className="py-2.5 pr-4">
-                      <Link href={`/admin/artworks/${a.id}`} className="link">{a.title}</Link>
-                      {!a.published && <span className="text-[0.8125rem] text-stone"> (hidden)</span>}
+                      <Link href={c.kind === "artwork" ? `/admin/artworks/${c.id}` : `/admin/commission-tracker/${c.id}`} className="link">
+                        {c.title}
+                      </Link>
+                      {c.hidden && <span className="text-[0.8125rem] text-stone"> (hidden)</span>}
                     </td>
-                    <td className="py-2.5 pr-4 tabular-nums">{a.year ?? ""}</td>
-                    <td className="py-2.5"><Pill value={a.status}>{ARTWORK_STATUS_LABELS[a.status]}</Pill></td>
+                    <td className="py-2.5 pr-4 text-stone">{c.detail}</td>
+                    <td className="py-2.5">
+                      <Pill value={c.status}>
+                        {c.kind === "artwork"
+                          ? ARTWORK_STATUS_LABELS[c.status as keyof typeof ARTWORK_STATUS_LABELS]
+                          : COMMISSION_JOB_STATUS_LABELS[c.status as keyof typeof COMMISSION_JOB_STATUS_LABELS]}
+                      </Pill>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -80,7 +89,7 @@ export default async function CertificatesAdmin() {
         {odd.length > 0 && (
           <p className="mt-4 text-[0.875rem] text-stone">
             {odd.length === 1 ? "1 number does" : `${odd.length} numbers do`} not follow the MH-year-number format (
-            {odd.map((r) => r.coaNumber).join(", ")}). They are listed above but not counted when working out the next number.
+            {odd.map((r) => r.number).join(", ")}). They are listed above but not counted when working out the next number.
           </p>
         )}
       </Panel>
